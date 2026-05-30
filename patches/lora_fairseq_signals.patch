@@ -1,0 +1,278 @@
+diff --git a/fairseq_signals/models/classification/ecg_transformer_classifier.py b/fairseq_signals/models/classification/ecg_transformer_classifier.py
+index d22a356..c595adb 100644
+--- a/fairseq_signals/models/classification/ecg_transformer_classifier.py
++++ b/fairseq_signals/models/classification/ecg_transformer_classifier.py
+@@ -1,4 +1,5 @@
+ import contextlib
++import logging
+ 
+ import torch
+ import torch.nn as nn
+@@ -14,12 +15,84 @@ from fairseq_signals.models.ecg_transformer import (
+ 
+ from fairseq_signals.utils import utils
+ 
++logger = logging.getLogger(__name__)
++
+ @dataclass
+ class ECGTransformerClassificationConfig(ECGTransformerFinetuningConfig):
+     num_labels: int = field(
+         default=MISSING, metadata={"help": "number of labels to be classified"}
+     )
+ 
++    # LoRA (parameter-efficient fine-tuning). lora_r=0 disables LoRA entirely,
++    # in which case the model behaves exactly as upstream (full / frozen FT
++    # controlled by feature_grad_mult and freeze_finetune_updates).
++    lora_r: int = field(
++        default=0, metadata={"help": "LoRA rank; 0 disables LoRA"}
++    )
++    lora_alpha: int = field(
++        default=16, metadata={"help": "LoRA alpha (scaling = alpha / r)"}
++    )
++    lora_dropout: float = field(
++        default=0.0, metadata={"help": "dropout on the LoRA input path"}
++    )
++    lora_targets: str = field(
++        default="q,v",
++        metadata={"help": "comma-separated attention projections to adapt: q,k,v,out"},
++    )
++    lora_layers: str = field(
++        default="all",
++        metadata={
++            "help": "which encoder layers get LoRA: 'all', 'lastN' (e.g. last4), "
++            "'firstN', or an explicit comma-separated list of 0-based indices"
++        },
++    )
++
++
++def _resolve_lora_layers(spec, n_layers):
++    spec = spec.strip().lower()
++    if spec == "all":
++        return set(range(n_layers))
++    if spec.startswith("last"):
++        k = int(spec[len("last"):])
++        return set(range(max(0, n_layers - k), n_layers))
++    if spec.startswith("first"):
++        k = int(spec[len("first"):])
++        return set(range(min(k, n_layers)))
++    return set(int(x) for x in spec.split(",") if x.strip() != "")
++
++
++def apply_lora(model, cfg):
++    """Inject LoRA into the targeted encoder layers and freeze the backbone.
++
++    Only LoRA parameters and the classification head remain trainable.
++    """
++    targets = [t.strip() for t in cfg.lora_targets.split(",") if t.strip()]
++    layers = model.encoder.encoder.layers
++    layer_idxs = _resolve_lora_layers(cfg.lora_layers, len(layers))
++
++    for i, layer in enumerate(layers):
++        if i in layer_idxs:
++            layer.self_attn.enable_lora(
++                cfg.lora_r, cfg.lora_alpha, cfg.lora_dropout, targets
++            )
++
++    trainable = 0
++    total = 0
++    for name, p in model.named_parameters():
++        total += p.numel()
++        if ("lora_" in name) or name.startswith("proj."):
++            p.requires_grad = True
++            trainable += p.numel()
++        else:
++            p.requires_grad = False
++
++    logger.info(
++        f"LoRA enabled: r={cfg.lora_r}, alpha={cfg.lora_alpha}, "
++        f"targets={targets}, layers={sorted(layer_idxs)} | "
++        f"trainable {trainable:,} / {total:,} params "
++        f"({100.0 * trainable / total:.3f}%)"
++    )
++
+ @register_model("ecg_transformer_classifier", dataclass=ECGTransformerClassificationConfig)
+ class ECGTransformerClassificationModel(ECGTransformerFinetuningModel):
+     def __init__(self, cfg, encoder):
+@@ -29,6 +102,9 @@ class ECGTransformerClassificationModel(ECGTransformerFinetuningModel):
+         nn.init.xavier_uniform_(self.proj.weight)
+         nn.init.constant_(self.proj.bias, 0.0)
+ 
++        if getattr(cfg, "lora_r", 0) > 0:
++            apply_lora(self, cfg)
++
+     def get_logits(self, net_output, normalize=False, **kwargs):
+         logits = net_output["out"]
+         
+diff --git a/fairseq_signals/modules/multi_head_attention.py b/fairseq_signals/modules/multi_head_attention.py
+index 30542d0..95dccac 100644
+--- a/fairseq_signals/modules/multi_head_attention.py
++++ b/fairseq_signals/modules/multi_head_attention.py
+@@ -62,8 +62,50 @@ class MultiHeadAttention(nn.Module):
+             nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size
+         )
+ 
++        # LoRA is disabled by default. When disabled, forward uses the original
++        # fused F.multi_head_attention_forward path (byte-identical to upstream).
++        # enable_lora() turns on an explicit-projection path that adds a
++        # low-rank delta to the targeted projection weights.
++        self.lora_enabled = False
++        self.lora_targets = set()
++        self.lora_scaling = 0.0
++        self.lora_drop = nn.Identity()
++
+         self.reset_parameters()
+ 
++    def enable_lora(self, r, alpha, dropout, targets):
++        """Attach LoRA parameters to the targeted projections.
++
++        targets: iterable subset of {"q", "k", "v", "out"}.
++        Standard LoRA init (Hu et al. 2021): A ~ kaiming_uniform, B = 0, so the
++        initial delta is zero and the module reproduces the pretrained weights.
++        """
++        assert r > 0
++        valid = {"q", "k", "v", "out"}
++        targets = set(targets)
++        assert targets <= valid, f"invalid LoRA targets: {targets - valid}"
++
++        proj_in = {
++            "q": (self.embed_dim, self.embed_dim),
++            "k": (self.kdim, self.embed_dim),
++            "v": (self.vdim, self.embed_dim),
++            "out": (self.embed_dim, self.embed_dim),
++        }
++
++        for name in targets:
++            in_features, out_features = proj_in[name]
++            lora_A = nn.Parameter(torch.zeros(r, in_features))
++            lora_B = nn.Parameter(torch.zeros(out_features, r))
++            nn.init.kaiming_uniform_(lora_A, a=math.sqrt(5))
++            # lora_B stays zero -> initial delta is zero
++            self.register_parameter(f"lora_A_{name}", lora_A)
++            self.register_parameter(f"lora_B_{name}", lora_B)
++
++        self.lora_enabled = True
++        self.lora_targets = targets
++        self.lora_scaling = alpha / r
++        self.lora_drop = nn.Dropout(p=dropout) if dropout > 0 else nn.Identity()
++
+     def reset_parameters(self):
+         if self.qkv_same_dim:
+             # Empirically observed the convergence to be much better with
+@@ -113,6 +155,11 @@ class MultiHeadAttention(nn.Module):
+         
+         assert key is not None and value is not None
+ 
++        if self.lora_enabled:
++            return self._forward_lora(
++                query, key, value, key_padding_mask, need_weights, attn_mask
++            )
++
+         return F.multi_head_attention_forward(
+             query,
+             key,
+@@ -135,4 +182,68 @@ class MultiHeadAttention(nn.Module):
+             q_proj_weight=self.q_proj.weight,
+             k_proj_weight=self.k_proj.weight,
+             v_proj_weight=self.v_proj.weight,
+-        )
+\ No newline at end of file
++        )
++
++    def _project(self, x, weight, bias, name):
++        out = F.linear(x, weight, bias)
++        if name in self.lora_targets:
++            lora_A = getattr(self, f"lora_A_{name}")
++            lora_B = getattr(self, f"lora_B_{name}")
++            out = out + self.lora_scaling * F.linear(
++                F.linear(self.lora_drop(x), lora_A), lora_B
++            )
++        return out
++
++    def _forward_lora(
++        self, query, key, value, key_padding_mask, need_weights, attn_mask
++    ):
++        """Explicit-projection self-attention with LoRA deltas.
++
++        Reproduces F.multi_head_attention_forward (scaled dot-product, separate
++        q/k/v projections, head reshape, key-padding masking) so that with a
++        zero LoRA delta and dropout off the output matches the fused path.
++        """
++        tgt_len, bsz, embed_dim = query.size()
++        src_len = key.size(0)
++        n_heads = self.n_heads
++        d_head = self.d_heads
++        scaling = d_head ** -0.5
++
++        q = self._project(query, self.q_proj.weight, self.q_proj.bias, "q")
++        k = self._project(key, self.k_proj.weight, self.k_proj.bias, "k")
++        v = self._project(value, self.v_proj.weight, self.v_proj.bias, "v")
++
++        q = q * scaling
++
++        q = q.contiguous().view(tgt_len, bsz * n_heads, d_head).transpose(0, 1)
++        k = k.contiguous().view(src_len, bsz * n_heads, d_head).transpose(0, 1)
++        v = v.contiguous().view(src_len, bsz * n_heads, d_head).transpose(0, 1)
++
++        attn_weights = torch.bmm(q, k.transpose(1, 2))  # (bsz*n_heads, tgt, src)
++
++        if attn_mask is not None:
++            attn_weights = attn_weights + attn_mask
++
++        if key_padding_mask is not None and key_padding_mask.any():
++            attn_weights = attn_weights.view(bsz, n_heads, tgt_len, src_len)
++            attn_weights = attn_weights.masked_fill(
++                key_padding_mask.unsqueeze(1).unsqueeze(2).to(torch.bool),
++                float("-inf"),
++            )
++            attn_weights = attn_weights.view(bsz * n_heads, tgt_len, src_len)
++
++        attn_weights_float = F.softmax(attn_weights.float(), dim=-1).type_as(attn_weights)
++
++        training = self.training or self.dropout.apply_during_inference
++        attn_probs = F.dropout(attn_weights_float, p=self.dropout.p, training=training)
++
++        attn = torch.bmm(attn_probs, v)  # (bsz*n_heads, tgt, d_head)
++        attn = attn.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
++        attn = self._project(attn, self.out_proj.weight, self.out_proj.bias, "out")
++
++        if need_weights:
++            attn_weights_out = attn_weights_float.view(
++                bsz, n_heads, tgt_len, src_len
++            ).mean(dim=1)
++            return attn, attn_weights_out
++        return attn, None
+\ No newline at end of file
+diff --git a/setup.py b/setup.py
+index 41b05ed..888d762 100644
+--- a/setup.py
++++ b/setup.py
+@@ -246,11 +246,17 @@ def get_files(path, relative_to="fairseq_signals"):
+ 
+ 
+ if __name__ == "__main__":
++    import shutil
+     try:
+         # symlink examples into fairseq package so package_data accepts them
+         fairseq_examples = os.path.join("fairseq_signals", "examples")
++        _copied = False
+         if "build_ext" not in sys.argv[1:] and not os.path.exists(fairseq_examples):
+-            os.symlink(os.path.join("..", "examples"), fairseq_examples)
++            if sys.platform == "win32":
++                shutil.copytree(os.path.join("examples"), fairseq_examples)
++                _copied = True
++            else:
++                os.symlink(os.path.join("..", "examples"), fairseq_examples)
+ 
+         package_data = {
+             "fairseq_signals": (
+@@ -259,5 +265,8 @@ if __name__ == "__main__":
+         }
+         do_setup(package_data)
+     finally:
+-        if "build_ext" not in sys.argv[1:] and os.path.islink(fairseq_examples):
+-            os.unlink(fairseq_examples)
++        if "build_ext" not in sys.argv[1:]:
++            if _copied and os.path.isdir(fairseq_examples):
++                shutil.rmtree(fairseq_examples)
++            elif os.path.islink(fairseq_examples):
++                os.unlink(fairseq_examples)

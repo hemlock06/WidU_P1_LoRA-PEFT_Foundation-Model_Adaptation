@@ -1,0 +1,47 @@
+# Old git history
+.git_old_backup/
+
+# Archive
+_archive/
+
+# Data & weights (re-download if needed; not tracked in git)
+data/
+weights/
+*.pt
+*.pth
+!patches/lora_fairseq_signals.patch
+
+# Library (cloned separately via git clone; not tracked)
+fairseq-signals/
+
+# Environment
+conda_envs/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyc
+*.egg-info/
+.ipynb_checkpoints/
+
+# Outputs & logs (generated during training; not tracked)
+outputs/
+checkpoints/
+*.ckpt
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache/
+dist/
+build/
+
+# 로컬 작업 노트 (미추적)
+HANDOFF_*.md
