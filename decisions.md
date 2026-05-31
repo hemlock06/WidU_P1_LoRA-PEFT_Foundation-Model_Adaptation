@@ -1,6 +1,6 @@
 # ECG-FM Emergency Detection — 프로젝트 기록 인덱스
 
-> GitHub: `WidU_P1_ECG-emergency-detection`
+> GitHub: `WidU_P1_LoRA-PEFT_Foundation-Model_Adaptation`
 > 데이터·출력은 repo-로컬 `data/`·`outputs/` (대용량이라 미추적)
 > 최종 갱신: 2026-05-30 | **Project 1 완료 (모델·연구 안정화)**
 >
