@@ -33,7 +33,7 @@ from eval_mc_fair_compare import (
     MCDataset, infer, MODELS, CKPT_FM, DATA_DIR, N_CLASSES, CLASS_NAMES,
 )
 
-RAW_DIR = "D:/WidU_ecg-fm_emergency-detection/data/raw/cpsc2018"
+RAW_DIR = "data/raw/cpsc2018"
 ECTO_IDX = 4
 
 SNOMED_PACPVC = {284470004, 63593006, 427172004, 17338001}

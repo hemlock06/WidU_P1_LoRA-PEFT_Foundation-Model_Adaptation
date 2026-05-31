@@ -40,9 +40,9 @@ except ImportError:
     sys.exit("[오류] scikit-learn 미설치")
 
 # ── 경로 ────────────────────────────────────────────────────────────────
-CKPT_FM        = "D:/WidU_ecg-fm_emergency-detection/checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
-OUTPUTS        = "D:/WidU_ecg-fm_emergency-detection/outputs"
-PROCESSED      = "D:/WidU_ecg-fm_emergency-detection/data/processed"
+CKPT_FM        = "checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+OUTPUTS        = "outputs"
+PROCESSED      = "data/processed"
 CKPT_MULTISNR  = f"{OUTPUTS}/lora_multisnr/lora_multisnr_best.pt"   # ③ 모델
 
 CPSC_MC_TEST   = f"{PROCESSED}/cpsc2018_mc/test"

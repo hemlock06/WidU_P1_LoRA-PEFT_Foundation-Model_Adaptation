@@ -47,18 +47,18 @@ N_CLASSES = 5
 CLASS_NAMES = ["정상(NSR)", "AF", "급성허혈", "전도장애", "이소성"]
 EMERGENCY_CLASSES = (1, 2)  # AF + 급성허혈
 
-CKPT_FM  = "D:/WidU_ecg-fm_emergency-detection/checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
-DATA_DIR = "D:/WidU_ecg-fm_emergency-detection/data/processed/cpsc2018_mc_ml"
+CKPT_FM  = "checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+DATA_DIR = "data/processed/cpsc2018_mc_ml"
 
 MODELS = [
     {"name": "5b lora_mc",
-     "ckpt": "D:/WidU_ecg-fm_emergency-detection/outputs/lora_mc/lora_mc_best.pt",
+     "ckpt": "outputs/lora_mc/lora_mc_best.pt",
      "mc_key": "head_state", "bin_key": None, "mc_act": "softmax"},
     {"name": "5d multitask_snr",
-     "ckpt": "D:/WidU_ecg-fm_emergency-detection/outputs/lora_multitask_snr/lora_multitask_snr_best.pt",
+     "ckpt": "outputs/lora_multitask_snr/lora_multitask_snr_best.pt",
      "mc_key": "head_mc_state", "bin_key": "head_bin_state", "mc_act": "softmax"},
     {"name": "5e multitask_ml",
-     "ckpt": "D:/WidU_ecg-fm_emergency-detection/outputs/lora_multitask_ml/lora_multitask_ml_best.pt",
+     "ckpt": "outputs/lora_multitask_ml/lora_multitask_ml_best.pt",
      "mc_key": "head_mc_state", "bin_key": "head_bin_state", "mc_act": "sigmoid"},
 ]
 
@@ -246,7 +246,7 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data_dir", default=DATA_DIR)
     ap.add_argument("--old_data_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/processed/cpsc2018_mc",
+        default="data/processed/cpsc2018_mc",
         help="5b/5d 학습에 쓰인 구 데이터 — 누수 제거용 (train/val 레코드 제외)")
     ap.add_argument("--ckpt_path", default=CKPT_FM)
     ap.add_argument("--batch_size", type=int, default=32)

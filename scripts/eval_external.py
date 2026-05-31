@@ -42,9 +42,9 @@ except ImportError:
     sys.exit("[오류] scikit-learn 미설치 — pip install scikit-learn")
 
 # ── 경로 기본값 ────────────────────────────────────────────────────────
-CKPT_ECG_FM  = "D:/WidU_ecg-fm_emergency-detection/checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
-PROCESSED    = "D:/WidU_ecg-fm_emergency-detection/data/processed"
-OUTPUTS      = "D:/WidU_ecg-fm_emergency-detection/outputs"
+CKPT_ECG_FM  = "checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+PROCESSED    = "data/processed"
+OUTPUTS      = "outputs"
 
 MODEL_PATHS  = {
     "baseline"    : f"{OUTPUTS}/baseline/baseline_best.pt",

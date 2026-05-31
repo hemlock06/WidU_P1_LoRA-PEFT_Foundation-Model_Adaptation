@@ -19,15 +19,15 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.isotonic import IsotonicRegression
 from sklearn.metrics import roc_auc_score
 
-CKPT_FM=r"D:\WidU_ecg-fm_emergency-detection\checkpoints\ecg-fm\mimic_iv_ecg_physionet_pretrained.pt"
-CKPT_P1=r"D:\WidU_ecg-fm_emergency-detection\outputs\lora_multitask_snr_a07\lora_multitask_snr_best.pt"
-CKPT_GATE=r"D:\WidU_ecg-fm_emergency-detection\outputs\gate\gate_best.pt"
-CPSC_TR=r"D:\WidU_ecg-fm_emergency-detection\data\processed\cpsc2018_mc\train"
-CPSC_TE=r"D:\WidU_ecg-fm_emergency-detection\data\processed\cpsc2018_mc\test"
-CACHET=r"D:\WidU_ecg-fm_emergency-detection\data\processed\cachet"
-NSTDB=r"D:\WidU_ecg-fm_emergency-detection\data\raw\nstdb"
-PTT=r"D:\WidU_multimodal_fusion\raw\ptt_ppg"
-OUT=r"D:\WidU_ecg-fm_emergency-detection\outputs\gate\recalib.json"
+CKPT_FM=r"checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+CKPT_P1=r"outputs/lora_multitask_snr_a07/lora_multitask_snr_best.pt"
+CKPT_GATE=r"outputs/gate/gate_best.pt"
+CPSC_TR=r"data/processed/cpsc2018_mc/train"
+CPSC_TE=r"data/processed/cpsc2018_mc/test"
+CACHET=r"data/processed/cachet"
+NSTDB=r"data/raw/nstdb"
+PTT=r"../WidU_multimodal_fusion/raw/ptt_ppg"
+OUT=r"outputs/gate/recalib.json"
 LEAD=1; T_ALERT=0.4753; LAM=0.6
 
 def set_det(s=42):

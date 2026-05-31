@@ -8,7 +8,7 @@
 
 **목적**: 게이트(단계 7) 학습에 필요한 per-lead(채널별) 라벨이 공식 release에 있는지 확인
 
-**실행**: `scripts/preflight_1_physionet2011.py --data_dir D:/WidU_ecg-fm_emergency-detection/data/raw/physionet2011`
+**실행**: `scripts/preflight_1_physionet2011.py --data_dir data/raw/physionet2011`
 
 ### 데이터 구조
 
@@ -91,7 +91,7 @@
 |---|---|
 | set-a.tar.gz | ~103MB, 3,004개 파일 |
 | set-b.tar.gz | ~51MB, 1,502개 파일 |
-| 저장 경로 | `D:/WidU_ecg-fm_emergency-detection/data/raw/physionet2011` |
+| 저장 경로 | `data/raw/physionet2011` |
 
 ---
 
@@ -131,7 +131,7 @@
 
 **목적**: 다운로드 완료된 외부검증 DB 3종을 단계 9 추론용 `.npy`로 전처리 (12-lead, 500Hz, 5,000샘플 윈도우)
 
-**환경**: `D:/conda_envs/py39/python.exe` (wfdb 4.3.1, scipy, h5py)
+**환경**: `python` (wfdb 4.3.1, scipy, h5py)
 
 | DB | 스크립트 | 출력 shape | 응급 | 정상 | 비고 |
 |---|---|---|---|---|---|
@@ -175,7 +175,7 @@
 
 ### v1 (실패 — FFT OOM)
 
-**실행**: `D:\conda_envs\py39\python.exe scripts/preprocess_ltst.py` (PID 690)
+**실행**: `python scripts/preprocess_ltst.py` (PID 690)
 
 - `scipy.signal.resample` (FFT 기반) 사용
 - s20011~s20071 정상 처리 후 **s20081부터 연속 `std::bad_alloc`**
@@ -222,7 +222,7 @@
 ### PTB-XL 전처리
 
 - 스크립트: `scripts/preprocess_ptbxl.py`
-- `conda run` 사용 시 UnicodeEncodeError (한글 stdout + cp949 충돌) → `D:/conda_envs/py39/python.exe` 직접 실행으로 우회
+- `conda run` 사용 시 UnicodeEncodeError (한글 stdout + cp949 충돌) → `python` 직접 실행으로 우회
 - 결과: train=12,847 / val=2,790 / test=2,742 (patient-level split, seed=42)
 - 클래스 분포: 응급(MI/STTC)=9,285 / 정상(NORM)=9,097 / 제외=3,417
 
@@ -316,7 +316,7 @@ Ep  Loss    ValAUROC
 
 ## 환경 설정 기록 (2026-05-24)
 
-- fairseq-signals: `pip install -e .` (editable install, C:\ecg-project\fairseq-signals)
+- fairseq-signals: `pip install -e .` (editable install)
 - ECG-FM 체크포인트: HuggingFace `bowang-lab/ecg-fm` → `mimic_iv_ecg_physionet_pretrained.pt`
 - h5py 설치: `pip install h5py` (CACHET HDF5 탐색용)
 - wfdb 설치: `pip install wfdb` (PhysioNet 다운로드·로드용)

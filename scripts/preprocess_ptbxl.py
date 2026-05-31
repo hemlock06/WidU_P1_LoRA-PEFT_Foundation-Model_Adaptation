@@ -26,8 +26,8 @@ Split: patient-level (ecg_id → patient_id 기준), seed=42, 70/15/15
 사용법:
   python scripts/preprocess_ptbxl.py
   python scripts/preprocess_ptbxl.py \\
-      --data_dir D:/WidU_ecg-fm_emergency-detection/data/raw/ptbxl \\
-      --out_dir  D:/WidU_ecg-fm_emergency-detection/data/processed/ptbxl
+      --data_dir data/raw/ptbxl \\
+      --out_dir  data/processed/ptbxl
 """
 
 import argparse
@@ -54,8 +54,8 @@ SEED        = 42
 # PTB-XL 12-lead 순서: I II III aVR aVL aVF V1 V2 V3 V4 V5 V6
 # wfdb 로드 시 이 순서 그대로 나옴 — 재배치 불필요
 
-DATA_DEFAULT  = "D:/WidU_ecg-fm_emergency-detection/data/raw/ptbxl"
-OUT_DEFAULT   = "D:/WidU_ecg-fm_emergency-detection/data/processed/ptbxl"
+DATA_DEFAULT  = "data/raw/ptbxl"
+OUT_DEFAULT   = "data/processed/ptbxl"
 
 
 def parse_superclass(scp_str):

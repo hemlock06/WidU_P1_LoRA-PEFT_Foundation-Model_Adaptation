@@ -367,11 +367,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--data_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/processed/cpsc2018_mc")
+        default="data/processed/cpsc2018_mc")
     parser.add_argument("--ckpt_path",
-        default="D:/WidU_ecg-fm_emergency-detection/checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt")
+        default="checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt")
     parser.add_argument("--out_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/outputs/lora_mc")
+        default="outputs/lora_mc")
     parser.add_argument("--batch_size",   type=int,   default=16)
     parser.add_argument("--epochs",       type=int,   default=30)
     parser.add_argument("--lr",           type=float, default=5e-4)

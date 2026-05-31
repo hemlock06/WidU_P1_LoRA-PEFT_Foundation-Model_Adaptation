@@ -30,8 +30,8 @@ Split:
 
 사용법:
   python scripts/preprocess_physionet2011.py \\
-      --data_dir D:/WidU_ecg-fm_emergency-detection/data/raw/physionet2011/set-a \\
-      --out_dir  D:/WidU_ecg-fm_emergency-detection/data/processed/physionet2011
+      --data_dir data/raw/physionet2011/set-a \\
+      --out_dir  data/processed/physionet2011
 """
 
 import argparse
@@ -147,12 +147,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--data_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/raw/physionet2011/set-a",
+        default="data/raw/physionet2011/set-a",
         help="set-a 폴더 경로 (RECORDS-* 파일과 .dat/.hea 파일 위치)",
     )
     parser.add_argument(
         "--out_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/processed/physionet2011",
+        default="data/processed/physionet2011",
         help="전처리 결과 저장 폴더",
     )
     parser.add_argument("--seed", type=int, default=42)

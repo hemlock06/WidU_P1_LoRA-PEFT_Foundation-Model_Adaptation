@@ -178,11 +178,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--data_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/raw/incart",
+        default="data/raw/incart",
     )
     parser.add_argument(
         "--out_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/processed/incart",
+        default="data/processed/incart",
     )
     args = parser.parse_args()
 

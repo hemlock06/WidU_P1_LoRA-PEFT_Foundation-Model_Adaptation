@@ -109,17 +109,17 @@ def run_model(name, ckpt_path, args, device, test_loader, multisnr):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--data_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/processed/cpsc2018")
+        default="data/processed/cpsc2018")
     p.add_argument("--ckpt_path",
-        default="D:/WidU_ecg-fm_emergency-detection/checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt")
+        default="checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt")
     p.add_argument("--nstdb_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/raw/nstdb")
+        default="data/raw/nstdb")
     p.add_argument("--lora2_ckpt",
-        default="D:/WidU_ecg-fm_emergency-detection/outputs/lora/lora_best.pt")
+        default="outputs/lora/lora_best.pt")
     p.add_argument("--lora3_ckpt",
-        default="D:/WidU_ecg-fm_emergency-detection/outputs/lora_multisnr/lora_multisnr_best.pt")
+        default="outputs/lora_multisnr/lora_multisnr_best.pt")
     p.add_argument("--out_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/outputs/snr_curve")
+        default="outputs/snr_curve")
     p.add_argument("--batch_size", type=int, default=16)
     args = p.parse_args()
 

@@ -43,14 +43,14 @@ except ImportError:
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 # ── 경로 ─────────────────────────────────────────────────────────────────
-CKPT_FM     = "D:/WidU_ecg-fm_emergency-detection/checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
-CPSC_TEST   = "D:/WidU_ecg-fm_emergency-detection/data/processed/cpsc2018/test"
-CPSC_MC_TEST= "D:/WidU_ecg-fm_emergency-detection/data/processed/cpsc2018_mc/test"
+CKPT_FM     = "checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+CPSC_TEST   = "data/processed/cpsc2018/test"
+CPSC_MC_TEST= "data/processed/cpsc2018_mc/test"
 
-CKPT_III    = "D:/WidU_ecg-fm_emergency-detection/outputs/lora_multisnr/lora_multisnr_best.pt"
-CKPT_P1     = "D:/WidU_ecg-fm_emergency-detection/outputs/lora_multitask_snr_a07/lora_multitask_snr_best.pt"
+CKPT_III    = "outputs/lora_multisnr/lora_multisnr_best.pt"
+CKPT_P1     = "outputs/lora_multitask_snr_a07/lora_multitask_snr_best.pt"
 
-OUT_DIR     = "D:/WidU_ecg-fm_emergency-detection_git/results"
+OUT_DIR     = "results"
 
 LEAD_NAMES  = ["I","II","III","aVR","aVL","aVF","V1","V2","V3","V4","V5","V6"]
 

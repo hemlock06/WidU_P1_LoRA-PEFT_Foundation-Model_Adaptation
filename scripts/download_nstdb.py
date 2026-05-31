@@ -28,7 +28,7 @@ except Exception:
     pass
 
 # 데이터는 _git 레포가 아니라 비-_git 디렉토리에 저장 (CPSC와 동일 관행)
-DEST = "D:/WidU_ecg-fm_emergency-detection/data/raw/nstdb"
+DEST = "data/raw/nstdb"
 NOISE_RECORDS = ["bw", "em", "ma"]
 
 

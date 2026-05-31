@@ -26,9 +26,9 @@ import numpy as np, torch, torch.nn as nn
 # ── 모델 체크포인트 경로 (이식성: 환경변수 우선, 없으면 기본값) ──────────────────
 #   다른 환경에서 이식(vendoring) 시: P1_CKPT_FM / P1_CKPT_P1 / P1_CKPT_REL 환경변수로
 #   체크포인트 위치 지정(또는 P1CardiacChannel(ckpt_fm=..., ...) 인자로 전달).
-_DEF_FM =r"D:\WidU_ecg-fm_emergency-detection\checkpoints\ecg-fm\mimic_iv_ecg_physionet_pretrained.pt"
-_DEF_P1 =r"D:\WidU_ecg-fm_emergency-detection\outputs\lora_multitask_snr_a07\lora_multitask_snr_best.pt"
-_DEF_REL=r"D:\WidU_ecg-fm_emergency-detection\outputs\gate\reliability_head.pt"
+_DEF_FM =r"checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+_DEF_P1 =r"outputs/lora_multitask_snr_a07/lora_multitask_snr_best.pt"
+_DEF_REL=r"outputs/gate/reliability_head.pt"
 CKPT_FM =os.environ.get("P1_CKPT_FM",  _DEF_FM)
 CKPT_P1 =os.environ.get("P1_CKPT_P1",  _DEF_P1)
 CKPT_REL=os.environ.get("P1_CKPT_REL", _DEF_REL)
@@ -117,8 +117,8 @@ if __name__ == "__main__":
     try: sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception: pass
     ch = P1CardiacChannel()
-    cs = np.load(r"D:\WidU_ecg-fm_emergency-detection\data\processed\cachet\signals.npy")
-    cl = np.load(r"D:\WidU_ecg-fm_emergency-detection\data\processed\cachet\labels.npy")
+    cs = np.load(r"data/processed/cachet/signals.npy")
+    cl = np.load(r"data/processed/cachet/labels.npy")
     out = ch.infer(cs[:300])
     print("P1 cardiac 채널 데모 (CACHET 300, λ=%.2f)" % ch.lam)
     for name, m in [("AF(label=1)", cl[:300] == 1), ("정상(label=0)", cl[:300] == 0)]:

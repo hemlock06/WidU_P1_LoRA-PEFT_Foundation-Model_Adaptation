@@ -25,7 +25,7 @@ try:
 except Exception:
     pass
 
-DEST = "D:/WidU_ecg-fm_emergency-detection/data/raw/physionet2011"
+DEST = "data/raw/physionet2011"
 BASE_URL = "https://physionet.org/files/challenge-2011/1.0.0"
 
 FILES = [

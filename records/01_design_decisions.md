@@ -14,12 +14,12 @@
 
 | 항목 | 사양 |
 |---|---|
-| Python | 3.9 (D:\conda_envs\py39\python.exe) |
+| Python | 3.9 (python) |
 | PyTorch | 2.1.2+cu118 |
 | CUDA | 11.8 |
 | GPU | NVIDIA RTX 3060 12GB |
 | OS | Windows |
-| fairseq-signals | editable install (C:\ecg-project\fairseq-signals) |
+| fairseq-signals | editable install (`pip install -e .`) |
 | peft | 0.17.1 |
 | transformers | 4.46.0 |
 | ECG-FM 체크포인트 | `mimic_iv_ecg_physionet_pretrained.pt` (HuggingFace bowang-lab/ecg-fm) |

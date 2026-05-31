@@ -24,7 +24,7 @@ try:
 except Exception:
     pass
 
-DEST_BASE = "D:/WidU_ecg-fm_emergency-detection/data/raw"
+DEST_BASE = "data/raw"
 
 DB_CONFIG = {
     "staffiii": {

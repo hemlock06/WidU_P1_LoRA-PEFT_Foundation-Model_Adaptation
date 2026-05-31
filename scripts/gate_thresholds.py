@@ -70,10 +70,10 @@ def set_deterministic(seed=42):
     torch.backends.cudnn.benchmark = False
 
 EMBED_DIM  = 768
-DATA_DIR   = "D:/WidU_ecg-fm_emergency-detection/data/processed/physionet2011"
-CKPT_FM    = "D:/WidU_ecg-fm_emergency-detection/checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
-GATE_CKPT  = "D:/WidU_ecg-fm_emergency-detection/outputs/gate/gate_best.pt"
-OUT_DIR    = "D:/WidU_ecg-fm_emergency-detection/outputs/gate"
+DATA_DIR   = "data/processed/physionet2011"
+CKPT_FM    = "checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+GATE_CKPT  = "outputs/gate/gate_best.pt"
+OUT_DIR    = "outputs/gate"
 
 
 class GateDataset(Dataset):

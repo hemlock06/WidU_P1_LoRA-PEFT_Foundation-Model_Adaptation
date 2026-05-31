@@ -35,8 +35,8 @@ Split:
 
 사용법:
   python scripts/preprocess_cpsc2018_mc.py \\
-      --data_dir D:/WidU_ecg-fm_emergency-detection/data/raw/cpsc2018 \\
-      --out_dir  D:/WidU_ecg-fm_emergency-detection/data/processed/cpsc2018_mc_ml
+      --data_dir data/raw/cpsc2018 \\
+      --out_dir  data/processed/cpsc2018_mc_ml
 """
 
 import argparse
@@ -218,9 +218,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--data_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/raw/cpsc2018")
+        default="data/raw/cpsc2018")
     parser.add_argument("--out_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/processed/cpsc2018_mc_ml")
+        default="data/processed/cpsc2018_mc_ml")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 

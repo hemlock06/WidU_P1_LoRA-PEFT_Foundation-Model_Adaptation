@@ -66,11 +66,11 @@ CLASS_NAMES = [
 ]
 EMERGENCY_CLASSES = (1, 2)  # AF + 급성허혈
 
-CKPT_FM   = "D:/WidU_ecg-fm_emergency-detection/checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
-DATA_DIR  = "D:/WidU_ecg-fm_emergency-detection/data/processed/cpsc2018_mc_ml"
-NSTDB_DIR = "D:/WidU_ecg-fm_emergency-detection/data/raw/nstdb"
-OUT_DIR   = "D:/WidU_ecg-fm_emergency-detection/outputs/lora_multitask_ml"
-WARM_CKPT = "D:/WidU_ecg-fm_emergency-detection/outputs/lora_multitask_snr/lora_multitask_snr_best.pt"
+CKPT_FM   = "checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+DATA_DIR  = "data/processed/cpsc2018_mc_ml"
+NSTDB_DIR = "data/raw/nstdb"
+OUT_DIR   = "outputs/lora_multitask_ml"
+WARM_CKPT = "outputs/lora_multitask_snr/lora_multitask_snr_best.pt"
 
 
 # ── LoRA ─────────────────────────────────────────────────────────────────

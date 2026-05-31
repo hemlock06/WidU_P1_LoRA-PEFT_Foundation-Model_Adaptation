@@ -97,7 +97,7 @@ class CardiacLoggingAdapter:
 if __name__ == "__main__":
     try: sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception: pass
-    cs = np.load(r"D:\WidU_ecg-fm_emergency-detection\data\processed\cachet\signals.npy")
+    cs = np.load(r"data/processed/cachet/signals.npy")
     ad = CardiacLoggingAdapter()
     recs = [ad.to_record(cs[i], master_clock_ms=1000 * i, include_raw=False)
             for i in range(3)]
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     try:
         import pandas as pd
         df = pd.DataFrame([{k: v for k, v in r.items()} for r in recs])
-        out = r"D:\WidU_ecg-fm_emergency-detection\outputs\gate\_cardiac_log_demo.parquet"
+        out = r"outputs/gate/_cardiac_log_demo.parquet"
         df.to_parquet(out)
         print(f"  parquet 데모 저장: {out} ({len(df)} rows, {df.shape[1]} cols)")
     except Exception as e:

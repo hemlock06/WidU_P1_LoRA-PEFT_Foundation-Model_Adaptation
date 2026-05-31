@@ -44,10 +44,10 @@ except ImportError:
     sys.exit("[오류] scikit-learn 미설치")
 
 # ── 경로 ────────────────────────────────────────────────────────────────
-CKPT_FM      = "D:/WidU_ecg-fm_emergency-detection/checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
-PROCESSED    = "D:/WidU_ecg-fm_emergency-detection/data/processed"
-OUTPUTS      = "D:/WidU_ecg-fm_emergency-detection/outputs"
-NSTDB_DIR    = "D:/WidU_ecg-fm_emergency-detection/data/raw/nstdb"
+CKPT_FM      = "checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+PROCESSED    = "data/processed"
+OUTPUTS      = "outputs"
+NSTDB_DIR    = "data/raw/nstdb"
 OUT_DIR      = f"{OUTPUTS}/lora_mixed"
 
 CPSC_TRAIN   = f"{PROCESSED}/cpsc2018/train"

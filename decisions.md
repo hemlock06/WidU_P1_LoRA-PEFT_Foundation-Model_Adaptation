@@ -1,7 +1,7 @@
 # ECG-FM Emergency Detection — 프로젝트 기록 인덱스
 
-> 작업 레포: `D:\WidU_ecg-fm_emergency-detection_git` (GitHub: `WidU_P1_ECG-emergency-detection`)
-> 데이터/출력: `D:\WidU_ecg-fm_emergency-detection`
+> GitHub: `WidU_P1_LoRA-PEFT_Foundation-Model_Adaptation`
+> 데이터·출력은 repo-로컬 `data/`·`outputs/` (대용량이라 미추적)
 > 최종 갱신: 2026-05-30 | **Project 1 완료 (모델·연구 안정화)**
 >
 > cardiac 채널은 웨어러블 단일리드 적용까지 검증 완료(단계 11). 모델은 동결 상태이며,
@@ -112,7 +112,7 @@
 ## 체크포인트 위치
 
 ```
-D:/WidU_ecg-fm_emergency-detection/outputs/
+outputs/
 ├── baseline/baseline_best.pt                          epoch=25, AUROC=0.9477 (이진 ①)
 ├── lora/lora_best.pt                                  epoch=21, AUROC=0.9477 (이진 ②)
 ├── lora_multisnr/lora_multisnr_best.pt               epoch=30, AUROC=0.9463 (이진 ③, 강건성 기준)

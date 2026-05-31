@@ -30,7 +30,7 @@ try:
 except Exception:
     pass
 
-DEST = "D:/WidU_ecg-fm_emergency-detection/data/raw/cachet"
+DEST = "data/raw/cachet"
 DOWNLOAD_URL = "https://ndownloader.figshare.com/files/27917358"
 ZIP_NAME = "cachet-cadb_short_format.zip"
 HDF5_NAME = "cachet-cadb_short_format_without_context.hdf5"
