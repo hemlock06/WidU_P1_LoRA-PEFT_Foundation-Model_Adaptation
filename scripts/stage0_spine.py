@@ -20,13 +20,13 @@ try: sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 except Exception: pass
 from sklearn.metrics import roc_auc_score, roc_curve
 
-CKPT_FM   = r"D:\WidU_ecg-fm_emergency-detection\checkpoints\ecg-fm\mimic_iv_ecg_physionet_pretrained.pt"
-CKPT_P1   = r"D:\WidU_ecg-fm_emergency-detection\outputs\lora_multitask_snr_a07\lora_multitask_snr_best.pt"
-CKPT_GATE = r"D:\WidU_ecg-fm_emergency-detection\outputs\gate\gate_best.pt"
-CACHET    = r"D:\WidU_ecg-fm_emergency-detection\data\processed\cachet"
-CPSC_MC   = r"D:\WidU_ecg-fm_emergency-detection\data\processed\cpsc2018_mc\test"
-NSTDB     = r"D:\WidU_ecg-fm_emergency-detection\data\raw\nstdb"
-PTT       = r"D:\WidU_multimodal_fusion\raw\ptt_ppg"
+CKPT_FM   = r"checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+CKPT_P1   = r"outputs/lora_multitask_snr_a07/lora_multitask_snr_best.pt"
+CKPT_GATE = r"outputs/gate/gate_best.pt"
+CACHET    = r"data/processed/cachet"
+CPSC_MC   = r"data/processed/cpsc2018_mc/test"
+NSTDB     = r"data/raw/nstdb"
+PTT       = r"../WidU_multimodal_fusion/raw/ptt_ppg"
 T_MASK, T_ALERT = 0.2155, 0.4753
 LEAD = 1  # slot II = 패치 단일리드
 

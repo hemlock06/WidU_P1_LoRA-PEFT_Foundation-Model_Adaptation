@@ -11,13 +11,13 @@ URL:  https://physionet.org/files/challenge-2020/1.0.2/training/cpsc_2018/
     g2/  ...
     g7/  ...
 
-저장 위치: D:/WidU_ecg-fm_emergency-detection/data/raw/cpsc2018/
+저장 위치: data/raw/cpsc2018/
   (REFERENCE.csv + 모든 .hea/.mat를 단일 폴더에 평탄화)
 
 사용법:
   pip install requests tqdm
   python scripts/download_cpsc2018.py
-  python scripts/download_cpsc2018.py --dest D:/WidU_ecg-fm_emergency-detection/data/raw/cpsc2018
+  python scripts/download_cpsc2018.py --dest data/raw/cpsc2018
   python scripts/download_cpsc2018.py --workers 8   # 병렬 다운로드 수
 """
 
@@ -34,7 +34,7 @@ from tqdm import tqdm
 
 BASE_URL   = "https://physionet.org/files/challenge-2020/1.0.2/training/cpsc_2018/"
 GROUPS     = [f"g{i}" for i in range(1, 8)]   # g1 ~ g7
-DEFAULT_DEST = "D:/WidU_ecg-fm_emergency-detection/data/raw/cpsc2018"
+DEFAULT_DEST = "data/raw/cpsc2018"
 TIMEOUT    = 30   # 초 (단일 요청)
 CHUNK_SIZE = 1024 * 64  # 64 KB
 

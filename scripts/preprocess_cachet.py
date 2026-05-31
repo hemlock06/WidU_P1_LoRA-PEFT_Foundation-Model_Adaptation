@@ -62,12 +62,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--hdf5_path",
-        default="D:/WidU_ecg-fm_emergency-detection/data/raw/cachet/"
+        default="data/raw/cachet/"
                 "cachet-cadb_short_format_without_context.hdf5",
     )
     parser.add_argument(
         "--out_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/processed/cachet",
+        default="data/processed/cachet",
     )
     args = parser.parse_args()
 

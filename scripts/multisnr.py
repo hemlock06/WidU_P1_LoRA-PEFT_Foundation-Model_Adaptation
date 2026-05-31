@@ -33,7 +33,7 @@ import numpy as np
 import torch
 from scipy.signal import resample_poly
 
-NSTDB_DIR_DEFAULT = "D:/WidU_ecg-fm_emergency-detection/data/raw/nstdb"
+NSTDB_DIR_DEFAULT = "data/raw/nstdb"
 NOISE_TYPES = ("bw", "em", "ma")
 NSTDB_FS = 360            # NSTDB 원본 샘플링레이트
 TARGET_FS = 500           # ECG-FM 입력 샘플링레이트

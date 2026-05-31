@@ -210,13 +210,13 @@ def train(args):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--data_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/processed/cpsc2018")
+        default="data/processed/cpsc2018")
     p.add_argument("--ckpt_path",
-        default="D:/WidU_ecg-fm_emergency-detection/checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt")
+        default="checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt")
     p.add_argument("--nstdb_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/raw/nstdb")
+        default="data/raw/nstdb")
     p.add_argument("--out_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/outputs/lora_multisnr")
+        default="outputs/lora_multisnr")
     p.add_argument("--batch_size",   type=int,   default=16)
     p.add_argument("--epochs",       type=int,   default=30)
     p.add_argument("--lr",           type=float, default=5e-4)

@@ -124,11 +124,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--data_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/raw/staffiii",
+        default="data/raw/staffiii",
     )
     parser.add_argument(
         "--out_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/processed/staffiii",
+        default="data/processed/staffiii",
     )
     args = parser.parse_args()
 

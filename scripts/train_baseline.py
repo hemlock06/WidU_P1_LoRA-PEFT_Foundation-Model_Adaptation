@@ -19,9 +19,9 @@
 
 사용법:
   python scripts/train_baseline.py \\
-      --data_dir  D:/WidU_ecg-fm_emergency-detection/data/processed/cpsc2018 \\
-      --ckpt_path D:/WidU_ecg-fm_emergency-detection/checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt \\
-      --out_dir   D:/WidU_ecg-fm_emergency-detection/outputs/baseline
+      --data_dir  data/processed/cpsc2018 \\
+      --ckpt_path checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt \\
+      --out_dir   outputs/baseline
 """
 
 import argparse
@@ -253,11 +253,11 @@ def train(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/processed/cpsc2018")
+        default="data/processed/cpsc2018")
     parser.add_argument("--ckpt_path",
-        default="D:/WidU_ecg-fm_emergency-detection/checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt")
+        default="checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt")
     parser.add_argument("--out_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/outputs/baseline")
+        default="outputs/baseline")
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--epochs",     type=int, default=30)
     parser.add_argument("--lr",         type=float, default=1e-3)

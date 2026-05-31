@@ -8,7 +8,7 @@ PhysioNet ptb-xl/1.0.3 다운로드.
 
 사용법:
   python scripts/download_ptbxl.py
-  python scripts/download_ptbxl.py --out_dir D:/WidU_ecg-fm_emergency-detection/data/raw/ptbxl
+  python scripts/download_ptbxl.py --out_dir data/raw/ptbxl
   python scripts/download_ptbxl.py --workers 32   # 병렬 다운로드 스레드 수
 """
 
@@ -23,7 +23,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 BASE_URL = "https://physionet.org/files/ptb-xl/1.0.3/"
-OUT_DEFAULT = "D:/WidU_ecg-fm_emergency-detection/data/raw/ptbxl"
+OUT_DEFAULT = "data/raw/ptbxl"
 
 # 필요한 파일 목록 (500Hz 레코드 + 라벨만)
 ESSENTIAL_FILES = [

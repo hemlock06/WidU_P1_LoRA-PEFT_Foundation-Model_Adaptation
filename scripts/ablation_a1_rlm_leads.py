@@ -13,12 +13,12 @@ Ablation A1: RLM × Lead 수 교차 평가
 실행 순서:
   # 1단계: RLM 없는 모델 학습 (~30분)
   python scripts/train_lora.py --rlm_p 0 \\
-      --out_dir D:/WidU_ecg-fm_emergency-detection/outputs/lora_no_rlm
+      --out_dir outputs/lora_no_rlm
 
   # 2단계: 교차 평가
   python scripts/ablation_a1_rlm_leads.py \\
-      --rlm_ckpt   D:/WidU_ecg-fm_emergency-detection/outputs/lora/lora_best.pt \\
-      --no_rlm_ckpt D:/WidU_ecg-fm_emergency-detection/outputs/lora_no_rlm/lora_best.pt
+      --rlm_ckpt   outputs/lora/lora_best.pt \\
+      --no_rlm_ckpt outputs/lora_no_rlm/lora_best.pt
 
 선택 인수:
   --baseline_ckpt : 베이스라인(linear probe) baseline_best.pt 경로 (옵션)
@@ -228,11 +228,11 @@ def bootstrap_ci(probs, labels, n=1000, seed=0):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/processed/cpsc2018")
+        default="data/processed/cpsc2018")
     parser.add_argument("--ckpt_path",
-        default="D:/WidU_ecg-fm_emergency-detection/checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt")
+        default="checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt")
     parser.add_argument("--rlm_ckpt",
-        default="D:/WidU_ecg-fm_emergency-detection/outputs/lora/lora_best.pt")
+        default="outputs/lora/lora_best.pt")
     parser.add_argument("--no_rlm_ckpt",    default=None,
         help="RLM 없이 학습한 LoRA 체크포인트 (없으면 RLM 모델만 평가)")
     parser.add_argument("--baseline_ckpt",  default=None,

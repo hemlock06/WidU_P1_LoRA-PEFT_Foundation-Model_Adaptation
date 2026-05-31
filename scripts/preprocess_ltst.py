@@ -229,9 +229,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--data_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/raw/ltst")
+        default="data/raw/ltst")
     parser.add_argument("--out_dir",
-        default="D:/WidU_ecg-fm_emergency-detection/data/processed/ltst")
+        default="data/processed/ltst")
     parser.add_argument("--episode_buf", type=int, default=1,
         help="에피소드 경계 ±buf 윈도우 제외 (기본 1)")
     args = parser.parse_args()
