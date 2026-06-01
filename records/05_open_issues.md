@@ -94,6 +94,24 @@ P1을 코드·데이터 레벨로 심층 재감사. 4가지 발견(일부 자기
 4. **정규화·외부스케일 — 정상 확인**: 체크포인트 `cfg.normalize=False`(raw mV 정합). INCART
    전체-레코드 AFIB 라벨·리드순서 미검증은 외부검증 한계로 기존 문서화.
 
+### CACHET-CADB 학습형 개인화 — 데이터 타당성 점검 (NO-GO, 2026-06-01)
+
+**가설**: 개인 ECG baseline을 학습해 이탈을 이상으로 검출하는 within-subject 개인화가 AF 검출을
+개선하는가. 성립 조건 = 다수 subject가 사람당 충분한 AF 이벤트 보유(시간분할 적응→평가).
+
+**방법**: CACHET-CADB 종단 주석(per-subject `annotation.csv`: Start,End,Class) 집계. Class 매핑은
+데이터 descriptor(Frontiers Cardiovasc. Med. 2022, Table 7): **1=AF, 2=NSR, 3=Noise, 4=Others**.
+16GB 신호는 미해제, 주석 CSV만 파싱(`scripts/analyze_cachet_personalization.py`).
+
+**측정**: 총 1602 주석(논문 수치 일치). 전역 분포 AF 747 / NSR 615 / Noise 221 / Others 19.
+→ **AF(이상) ≥20건 보유 = 6/23 subject뿐**(AF≥1 = 11명, 논문 "11 patients had AF" 일치). 18명은
+AF 사실상 없음. 범례-무관 시 충분해 보였던 다수-event 클래스는 NSR(정상 baseline)이었음.
+
+**판정 (NO-GO)**: 이상(AF)이 소수 subject에 편중 → within-subject 시간분할 적응·평가가 다수에서
+불성립. 게다가 AF 모집단 검출이 이미 높은 수준(records/03)이라 편중 코호트에서 개인화의 한계이득
+입증 곤란. → **학습형 개인화 미진입, 실세계 종단 데이터 확보 시 재개 대상으로 보류.** 이상 희소성은
+건강 모니터링 데이터의 본질 — per-subject 편중이면 개인화 학습 불가가 정상 결론.
+
 ---
 
 ## 주의사항
