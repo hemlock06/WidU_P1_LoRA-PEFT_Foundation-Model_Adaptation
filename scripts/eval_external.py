@@ -233,7 +233,13 @@ def main():
                         choices=list(MODEL_PATHS.keys()))
     parser.add_argument("--batch",  type=int, default=BATCH_SIZE)
     parser.add_argument("--out_csv", default=f"{OUTPUTS}/external_eval_results.csv")
+    parser.add_argument("--lora_multisnr_ckpt", default=None,
+                        help="③ LoRA+RLM+multi-SNR 체크포인트 override (mixed 비교용)")
     args = parser.parse_args()
+
+    if args.lora_multisnr_ckpt:
+        MODEL_PATHS["lora_multisnr"] = args.lora_multisnr_ckpt
+        print(f"[override] ③ 체크포인트 → {args.lora_multisnr_ckpt}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("=" * 70)

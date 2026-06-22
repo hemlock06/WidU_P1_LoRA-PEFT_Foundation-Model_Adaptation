@@ -120,15 +120,18 @@ def inject_lora(model, rank, alpha, dropout,
 
 # ── 데이터셋: 이진 + 다중 라벨 동시 반환 ──────────────────────────────────
 class CPSCMultiTaskDataset(Dataset):
-    def __init__(self, split_dir: str):
-        self.signals    = np.load(os.path.join(split_dir, "signals.npy"))
+    def __init__(self, split_dir: str, mmap: bool = True):
+        # mmap=True: signals를 RAM에 적재하지 않고 디스크에서 샘플 단위 읽기 (OS page-cache로
+        # 속도 유지, 메모리 압박 시 회수 → 16GB RAM OOM 방지). 학습 수식 불변.
+        self.signals    = np.load(os.path.join(split_dir, "signals.npy"),
+                                  mmap_mode="r" if mmap else None)
         self.labels_mc  = np.load(os.path.join(split_dir, "labels.npy"))
         self.labels_bin = np.load(os.path.join(split_dir, "labels_bin.npy"))
 
     def __len__(self): return len(self.labels_mc)
 
     def __getitem__(self, idx):
-        x  = torch.tensor(self.signals[idx],    dtype=torch.float32)
+        x  = torch.tensor(np.ascontiguousarray(self.signals[idx]), dtype=torch.float32)
         yb = torch.tensor(float(self.labels_bin[idx]), dtype=torch.float32)
         ym = torch.tensor(int(self.labels_mc[idx]),    dtype=torch.long)
         return x, yb, ym
@@ -186,6 +189,8 @@ def evaluate(backbone, head_bin, head_mc, loader, device):
         all_bin_logits.append(bin_logits); all_mc_logits.append(mc_logits)
         all_yb.append(yb); all_ym.append(ym)
 
+    if device.type == "cuda":
+        torch.cuda.empty_cache()   # 장기 실행 단편화 누적 방지
     bin_logits = torch.cat(all_bin_logits).numpy()
     mc_logits  = torch.cat(all_mc_logits).numpy()
     yb         = torch.cat(all_yb).numpy().astype(int)
@@ -256,11 +261,11 @@ def train(args):
     test_ds  = CPSCMultiTaskDataset(os.path.join(args.data_dir, "test"))
 
     train_loader = DataLoader(train_ds, batch_size=args.batch_size,
-                              shuffle=True, num_workers=0, pin_memory=True)
+                              shuffle=True, num_workers=0, pin_memory=False)
     val_loader   = DataLoader(val_ds,   batch_size=args.batch_size,
-                              shuffle=False, num_workers=0, pin_memory=True)
+                              shuffle=False, num_workers=0, pin_memory=False)
     test_loader  = DataLoader(test_ds,  batch_size=args.batch_size,
-                              shuffle=False, num_workers=0, pin_memory=True)
+                              shuffle=False, num_workers=0, pin_memory=False)
 
     # 클래스 가중치 (multi, 역빈도)
     counts = np.array([(train_ds.labels_mc == c).sum() for c in range(N_CLASSES)],
@@ -328,25 +333,51 @@ def train(args):
     torch.manual_seed(args.seed)
     print(f"[증강] NSTDB 노이즈 로드 + 500Hz 리샘플 중...")
     multisnr = MultiSNRNoise(nstdb_dir=args.nstdb_dir, snr_set=snr_set,
-                             device=device, seed=args.seed)
+                             device=device, seed=args.seed,
+                             noise_mode=args.noise_mode)
     print(f"       pool 길이: "
           + ", ".join(f"{t}={multisnr.noise_pool[t].shape[0]:,}"
                       for t in ("bw", "em", "ma")))
+    print(f"       노이즈 모드: {args.noise_mode} "
+          f"({'리드당 1종' if args.noise_mode=='single' else 'bw·em·ma 가중합성(동시 중첩)'})")
     print()
 
     best_composite = 0.0
     best_epoch     = 0
     best_path      = os.path.join(args.out_dir, "lora_multitask_snr_best.pt")
+    resume_path    = os.path.join(args.out_dir, "resume.pt")
+    done_path      = os.path.join(args.out_dir, "DONE.txt")
+    start_epoch    = 1
+
+    # ── 자동 재개(self-healing): OOM 등으로 중단돼도 마지막 저장 epoch부터 이어감 ──
+    if args.resume and os.path.exists(resume_path):
+        rs = torch.load(resume_path, map_location=device)
+        backbone.load_state_dict(rs["lora_state"], strict=False)
+        head_bin.load_state_dict(rs["head_bin_state"])
+        head_mc.load_state_dict(rs["head_mc_state"])
+        optimizer.load_state_dict(rs["opt_state"])
+        scheduler.load_state_dict(rs["sched_state"])
+        start_epoch    = rs["epoch"] + 1
+        best_composite = rs["best_composite"]
+        best_epoch     = rs["best_epoch"]
+        # rng 상태 복원 → 무중단과 동일한 노이즈/셔플 realization (결정적 resume)
+        if "np_state" in rs:
+            np.random.set_state(rs["np_state"])
+            torch.set_rng_state(rs["torch_state"])
+            if rs.get("cuda_state") is not None and torch.cuda.is_available():
+                torch.cuda.set_rng_state_all(rs["cuda_state"])
+            multisnr.rng.bit_generator.state = rs["multisnr_state"]
+        print(f"[RESUME] epoch {start_epoch}부터 재개 (best={best_composite:.4f}@ep{best_epoch}, rng복원)")
 
     print(f"{'Ep':>3} {'Loss':>8} {'BCE':>6} {'CE':>6}  "
           f"{'BinAUROC':>9} {'MacroF1':>8} {'Compose':>8}")
     print("-" * 60)
 
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(start_epoch, args.epochs + 1):
         backbone.train(); head_bin.train(); head_mc.train()
         tot, tot_b, tot_c, n = 0.0, 0.0, 0.0, 0
 
-        for x, yb, ym in train_loader:
+        for bi, (x, yb, ym) in enumerate(train_loader):
             x  = x.to(device)
             yb = yb.to(device)
             ym = ym.to(device)
@@ -374,8 +405,12 @@ def train(args):
             tot_b += lb.item() * bs
             tot_c += lc.item() * bs
             n     += bs
+            if device.type == "cuda" and bi % 100 == 99:
+                torch.cuda.empty_cache()   # 단편화 누적 방지 (epoch 내 주기적)
 
         scheduler.step()
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
         val = evaluate(backbone, head_bin, head_mc, val_loader, device)
         composite = (val["bin_auroc"] + val["macro_f1"]) / 2
 
@@ -396,12 +431,34 @@ def train(args):
                 "val_macro_f1":       val["macro_f1"],
                 "val_composite":      composite,
                 "alpha":              args.alpha,
+                "noise_mode":         args.noise_mode,
                 "lora_rank":          args.lora_rank,
                 "lora_alpha":         args.lora_alpha,
                 "n_classes":          N_CLASSES,
                 "class_names":        CLASS_NAMES,
                 "emergency_classes":  EMERGENCY_CLASSES,
             }, best_path)
+
+        # 매 epoch resume 상태 저장 (LoRA delta+heads+opt+sched만 — 수 MB, 자동 재개용)
+        torch.save({
+            "epoch": epoch,
+            "lora_state": {k: v for k, v in backbone.state_dict().items() if "lora_" in k},
+            "head_bin_state": head_bin.state_dict(),
+            "head_mc_state": head_mc.state_dict(),
+            "opt_state": optimizer.state_dict(),
+            "sched_state": scheduler.state_dict(),
+            "best_composite": best_composite, "best_epoch": best_epoch,
+            # rng 상태까지 저장 → resume이 나도 무중단과 동일(결정적). 섭동 방지.
+            "np_state": np.random.get_state(),
+            "torch_state": torch.get_rng_state(),
+            "cuda_state": (torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None),
+            "multisnr_state": multisnr.rng.bit_generator.state,
+        }, resume_path)
+
+    # ── 학습 완료 마커 (test eval보다 먼저 — eval이 OOM나도 완료는 기록) ──
+    with open(done_path, "w", encoding="utf-8") as _f:
+        _f.write(f"trained {args.epochs} epochs, best composite={best_composite:.4f} @ep{best_epoch}\n")
+    print(f"[DONE] {done_path} — 학습 완료(전 epoch)")
 
     # ── 테스트 ────────────────────────────────────────────────────────────
     print()
@@ -482,6 +539,11 @@ def main():
                         help="샘플당 노이즈 주입 확률 (1-p_noise는 clean 유지)")
     parser.add_argument("--snr_set",    type=str,   default="24,18,12,6,0",
                         help="쉼표 구분 SNR 집합 (dB)")
+    parser.add_argument("--noise_mode", type=str,   default="single",
+                        choices=["single", "mixed", "mixed_temporal"],
+                        help="single=리드당 1종 / mixed=3종 가중합성 / mixed_temporal=+시간 엔벨로프")
+    parser.add_argument("--resume",     action="store_true",
+                        help="out_dir/resume.pt 있으면 마지막 epoch부터 자동 재개 (self-healing)")
     parser.add_argument("--seed",       type=int,   default=42)
     args = parser.parse_args()
     train(args)

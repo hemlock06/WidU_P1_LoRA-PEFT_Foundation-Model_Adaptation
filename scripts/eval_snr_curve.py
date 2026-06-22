@@ -6,7 +6,7 @@
   ② LoRA+RLM(clean) vs ③ LoRA+RLM+multi-SNR 을 동일 노이즈 조건에서 비교.
   → "multi-SNR이 모션 환경에서 더 강건"이 thesis 핵심 contribution의 정량 증거.
 
-핵심 논리 (멘토 방어):
+핵심 논리 (강건성 검증):
   - 두 모델 모두 같은 noisy test 입력으로 평가 (동일 시드 → 동일 노이즈 realization).
   - SNR이 낮아질수록(노이즈↑) 두 곡선이 벌어져야 함:
     ②는 clean만 학습 → 급락, ③는 multi-SNR 학습 → 완만.
@@ -121,6 +121,15 @@ def main():
     p.add_argument("--out_dir",
         default="outputs/snr_curve")
     p.add_argument("--batch_size", type=int, default=16)
+    p.add_argument("--noise_mode", type=str, default="single",
+        choices=["single", "mixed"],
+        help="평가 노이즈 합성 모드 (single=리드당 1종 / mixed=3종 가중합성)")
+    p.add_argument("--label2", type=str, default="lora2_clean",
+        help="첫째 모델(--lora2_ckpt) CSV 행 라벨")
+    p.add_argument("--label3", type=str, default="lora3_multisnr",
+        help="둘째 모델(--lora3_ckpt) CSV 행 라벨")
+    p.add_argument("--name2", type=str, default="② LoRA+RLM (clean)")
+    p.add_argument("--name3", type=str, default="③ LoRA+RLM+multi-SNR")
     args = p.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -135,17 +144,19 @@ def main():
     test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False)
     print(f"test set: {len(test_ds)}개")
 
-    multisnr = MultiSNRNoise(nstdb_dir=args.nstdb_dir, device=device, seed=42)
+    multisnr = MultiSNRNoise(nstdb_dir=args.nstdb_dir, device=device, seed=42,
+                             noise_mode=args.noise_mode)
+    print(f"평가 노이즈 모드: {args.noise_mode}")
 
-    res2 = run_model("② LoRA+RLM (clean)",      args.lora2_ckpt, args, device, test_loader, multisnr)
-    res3 = run_model("③ LoRA+RLM+multi-SNR",     args.lora3_ckpt, args, device, test_loader, multisnr)
+    res2 = run_model(args.name2, args.lora2_ckpt, args, device, test_loader, multisnr)
+    res3 = run_model(args.name3, args.lora3_ckpt, args, device, test_loader, multisnr)
 
     # ── CSV 저장 ──────────────────────────────────────────────────────
     csv_path = os.path.join(args.out_dir, "snr_curve.csv")
     with open(csv_path, "w", encoding="utf-8") as f:
         f.write("SNR_dB," + ",".join(["clean" if s is None else str(s) for s in SNR_LEVELS]) + "\n")
-        if res2: f.write("lora2_clean," + ",".join(f"{a:.4f}" for a in res2) + "\n")
-        if res3: f.write("lora3_multisnr," + ",".join(f"{a:.4f}" for a in res3) + "\n")
+        if res2: f.write(f"{args.label2}," + ",".join(f"{a:.4f}" for a in res2) + "\n")
+        if res3: f.write(f"{args.label3}," + ",".join(f"{a:.4f}" for a in res3) + "\n")
     print(f"\n[저장] CSV: {csv_path}")
 
     # ── PNG 그래프 ────────────────────────────────────────────────────
@@ -172,7 +183,7 @@ def main():
 
     # ── 해석 ──────────────────────────────────────────────────────────
     if res2 and res3:
-        print("\n[해석] 멘토 방어 포인트")
+        print("\n[해석] 강건성 핵심 포인트")
         for i, s in enumerate(SNR_LEVELS):
             tag = "clean" if s is None else f"{s}dB"
             gap = res3[i] - res2[i]

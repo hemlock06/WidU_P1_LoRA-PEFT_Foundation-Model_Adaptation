@@ -4,7 +4,7 @@ N-lead 강건성 전구간 평가 (ablation_nlead_curve.py)
 목적:
   1~12-lead 전 구간에서 AUROC를 측정하여 "lead 수 vs 성능" 곡선 생성.
   기존 ablation_a1_rlm_leads.py는 4개 고정 포인트(12/4/2/1)만 평가 →
-  포트폴리오·방어용으로 전구간 곡선이 필요.
+  전구간 곡선으로 강건성 경향을 정량화한다.
 
 방법:
   각 N (1~12)에 대해 12개 lead 중 N개를 무작위 선택(seed 고정, M회 반복)하고
@@ -16,7 +16,7 @@ N-lead 강건성 전구간 평가 (ablation_nlead_curve.py)
 
 출력:
   results/nlead_curve.csv    — N별 mean/std/min/max AUROC
-  results/nlead_curve.png    — 곡선 그래프 (포트폴리오용)
+  results/nlead_curve.png    — 곡선 그래프 (강건성 곡선)
 
 사용법:
   python scripts/ablation_nlead_curve.py
@@ -140,7 +140,7 @@ def apply_lead_mask(x: torch.Tensor, available: list) -> torch.Tensor:
 
 # ── 단일 lead 구성 평가 ───────────────────────────────────────────────────
 @torch.no_grad()
-def eval_leads(backbone, head, dataset, available_leads, device, batch_size=64,
+def eval_leads(backbone, head, dataset, available_leads, device, batch_size=32,
                is_multitask=False):
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0)
     all_probs, all_labels = [], []
@@ -155,22 +155,25 @@ def eval_leads(backbone, head, dataset, available_leads, device, batch_size=64,
         prob = torch.sigmoid(logit).cpu().numpy()
         all_probs.extend(prob.tolist())
         all_labels.extend(y.numpy().tolist())
+        del x, emb, logit
     probs  = np.array(all_probs)
     labels = np.array(all_labels, dtype=int)
+    if device.type == "cuda":
+        torch.cuda.empty_cache()   # 200+회 반복 시 단편화 누적 방지 (장기 실행 안정화)
     return roc_auc_score(labels, probs)
 
 
 # ── N-lead 전구간 평가 ────────────────────────────────────────────────────
 def evaluate_nlead_curve(backbone, head, dataset, n_trials, seed, device,
-                         is_multitask=False):
+                         is_multitask=False, n_min=1, n_max=12):
     """
-    N=1~12 각각에 대해 n_trials회 무작위 lead 조합 평가.
+    N=n_min~n_max 각각에 대해 n_trials회 무작위 lead 조합 평가.
     반환: {N: {"mean":, "std":, "min":, "max":, "all":[]}}
     """
     rng = np.random.default_rng(seed)
     results = {}
 
-    for n in range(1, 13):
+    for n in range(n_min, n_max + 1):
         aurocs = []
         if n == 12:
             # 12-lead는 모든 lead 사용 — 1회만
@@ -269,6 +272,14 @@ def main():
     parser.add_argument("--models", default="both",
                         choices=["③", "P1", "both"],
                         help="평가할 모델 (기본 both)")
+    parser.add_argument("--ckpt3", default=CKPT_III,
+                        help="③ 모델 체크포인트 (mixed 비교 시 override)")
+    parser.add_argument("--name3", default="③ LoRA+RLM+multi-SNR",
+                        help="③ 모델 라벨 (CSV/차트 키)")
+    parser.add_argument("--out_csv", default=os.path.join(OUT_DIR, "nlead_curve.csv"))
+    parser.add_argument("--out_png", default=os.path.join(OUT_DIR, "nlead_curve.png"))
+    parser.add_argument("--n_min", type=int, default=1, help="평가 시작 N (청크 실행용)")
+    parser.add_argument("--n_max", type=int, default=12, help="평가 끝 N (청크 실행용)")
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -292,16 +303,17 @@ def main():
 
     # ── ③ 모델 ────────────────────────────────────────────────────────────
     if args.models in ("③", "both"):
-        print("\n[① ③ LoRA+RLM+multi-SNR 평가]")
-        ckpt = torch.load(CKPT_III, map_location=device)
+        print(f"\n[① {args.name3} 평가]  ckpt={args.ckpt3}")
+        ckpt = torch.load(args.ckpt3, map_location=device)
         backbone.load_state_dict(ckpt["backbone_lora"], strict=False)
         head = BinaryHead().to(device)
         head.load_state_dict(ckpt["head_state"])
         dataset = ECGDataset(CPSC_TEST)
         print(f"  데이터: CPSC test {len(dataset)}개")
         res = evaluate_nlead_curve(backbone, head, dataset,
-                                   args.n_trials, args.seed, device, is_multitask=False)
-        all_results["③ LoRA+RLM+multi-SNR"] = res
+                                   args.n_trials, args.seed, device, is_multitask=False,
+                                   n_min=args.n_min, n_max=args.n_max)
+        all_results[args.name3] = res
 
     # ── P1 모델 ──────────────────────────────────────────────────────────
     if args.models in ("P1", "both"):
@@ -320,8 +332,8 @@ def main():
 
     # ── 결과 저장 ─────────────────────────────────────────────────────────
     print()
-    csv_path = os.path.join(OUT_DIR, "nlead_curve.csv")
-    png_path = os.path.join(OUT_DIR, "nlead_curve.png")
+    csv_path = args.out_csv
+    png_path = args.out_png
     save_csv(all_results, csv_path)
     make_chart(all_results, png_path)
 

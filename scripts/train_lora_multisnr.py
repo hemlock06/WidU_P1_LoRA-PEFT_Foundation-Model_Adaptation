@@ -97,10 +97,13 @@ def train(args):
     # ── multi-SNR 증강기 (노이즈 pool을 500Hz로 적재) ──────────────────
     print("[증강] NSTDB 노이즈 로드 + 500Hz 리샘플 중...")
     multisnr = MultiSNRNoise(nstdb_dir=args.nstdb_dir, snr_set=snr_set,
-                             device=device, seed=args.seed)
+                             device=device, seed=args.seed,
+                             noise_mode=args.noise_mode)
     print(f"       pool 길이: "
           + ", ".join(f"{t}={multisnr.noise_pool[t].shape[0]:,}"
                       for t in ("bw", "em", "ma")))
+    print(f"       노이즈 모드: {args.noise_mode} "
+          f"({'리드당 1종' if args.noise_mode=='single' else 'bw·em·ma 가중합성(동시 중첩)'})")
     print()
 
     # ── ECG-FM 로드 + LoRA 주입 ───────────────────────────────────────
@@ -179,6 +182,7 @@ def train(args):
                 "val_auroc": val_auroc, "val_f1": val_f1,
                 "lora_rank": args.lora_rank, "lora_alpha": args.lora_alpha,
                 "snr_set": snr_set, "p_noise": args.p_noise,
+                "noise_mode": args.noise_mode,
             }, best_path)
 
     # ── 테스트 평가 (clean test set — ②와 동일 조건 비교) ──────────────
@@ -229,6 +233,9 @@ def main():
                    help="쉼표 구분 SNR 집합 (dB)")
     p.add_argument("--p_noise",      type=float, default=0.75,
                    help="샘플당 노이즈 주입 확률 (1-p_noise는 clean 유지)")
+    p.add_argument("--noise_mode",   type=str,   default="single",
+                   choices=["single", "mixed"],
+                   help="single=리드당 1종 / mixed=bw·em·ma 가중합성 동시 중첩")
     p.add_argument("--seed",         type=int,   default=42)
     args = p.parse_args()
     train(args)
