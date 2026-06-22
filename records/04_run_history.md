@@ -4,45 +4,6 @@
 
 ---
 
-## Pre-flight 1: PhysioNet 2011 per-channel 라벨 확인 (2026-05-25)
-
-**목적**: 게이트(단계 7) 학습에 필요한 per-lead(채널별) 라벨이 공식 release에 있는지 확인
-
-**실행**: `scripts/preflight_1_physionet2011.py --data_dir data/raw/physionet2011`
-
-### 데이터 구조
-
-| 항목 | set-a | set-b |
-|---|---|---|
-| 총 파일 | 3,004개 | 1,502개 |
-| .dat | 1,000개 | 500개 |
-| .hea | 1,000개 | 500개 |
-| .txt | 1,000개 | 500개 |
-
-| 파일 | 레코드 수 |
-|---|---|
-| RECORDS | 1,000개 |
-| RECORDS-acceptable | 773개 |
-| RECORDS-unacceptable | 225개 |
-
-### 조사 결과
-
-| 확인 항목 | 결과 |
-|---|---|
-| .txt 파일 내 per-channel grade (A/B/C/D/F) | **미발견** — .txt는 raw signal (13컬럼 = time + 12 leads) |
-| .hea 파일 내 quality 주석 | **없음** — `#<age>: 0 <sex>: ?` 메타만 존재 |
-| per-channel grade 키워드 | **미발견** |
-
-### 결론 및 후속 전략
-
-- **per-channel grade 없음**: PhysioNet 2011 공식 release에는 record-level acceptable/unacceptable만 제공
-- **단계 7 전략**: PhysioNet 2011 record-level label (acceptable=양호, unacceptable=불량)을 게이트 학습 라벨로 직접 사용
-  - acceptable 773개 → 품질 양호(1)
-  - unacceptable 225개 → 품질 불량(0)
-  - 형식: 12-lead, 500Hz, 5000샘플 — ECG-FM 입력과 완벽 일치
-
----
-
 ## Pre-flight 2: ECG-FM 4-lead 0-fill forward 테스트 (2026-05-24)
 
 **목적**: 12-lead 슬롯에 N개 lead만 넣고 나머지 0-fill → forward 정상 작동 여부 확인
@@ -78,20 +39,6 @@
 **결과**: bw / em / ma 3종 다운로드 완료
 - 원본 360Hz → 500Hz 리샘플 (wfdb.processing.resample_sig)
 - pool 길이: 1,805,556 samples per type
-
----
-
-## PhysioNet 2011 다운로드 (2026-05-25)
-
-**목적**: 단계 7 신호품질 게이트 학습 데이터
-
-**실행**: `python scripts/download_physionet2011.py`
-
-| 항목 | 값 |
-|---|---|
-| set-a.tar.gz | ~103MB, 3,004개 파일 |
-| set-b.tar.gz | ~51MB, 1,502개 파일 |
-| 저장 경로 | `data/raw/physionet2011` |
 
 ---
 

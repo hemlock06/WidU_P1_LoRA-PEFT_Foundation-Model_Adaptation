@@ -55,6 +55,18 @@
 
 - **주의**: `features_only=True` 필수 — False 시 quantizer/contrastive head 실행 → Inf 발생
 
+### 체크포인트 식별 주의 — 모델 사양은 yaml이 아니라 텐서 기준 (2026-06-03 점검)
+
+- **실측 사양**: `mimic_iv_ecg_physionet_pretrained.pt` = wav2vec2_cmsc, **768-dim · 12-layer · 90.88M**
+  (q_proj weight 768×768, `ckpt['cfg'].model.encoder_embed_dim=768`).
+- ⚠️ **체크포인트 동봉 `.yaml` 사이드카는 stale 템플릿** — `encoder_embed_dim=1024`/`encoder_layers=24`로
+  표기되나 실제 가중치와 불일치. 모델 식별은 **`.yaml`이 아니라 `ckpt['model']` 텐서 shape / `ckpt['cfg']`** 기준.
+- **파일 크기 분해**: 사전학습 `.pt` 1.09GB = 모델 가중치 364MB + **Adam 옵티마이저 상태 727MB**(=2×params).
+  추론·파인튜닝엔 옵티마이저 상태 불요 → 슬림 시 364MB.
+- **P1 산출 체크포인트**: `lora_multitask_snr_best.pt`(348MB)의 대부분도 frozen 공개 백본 재저장분 —
+  신규 학습 파라미터(LoRA r8 q/v + 헤드)는 **~0.3M(≈1–2MB)**. 재배포 시 백본은 공개 출처
+  (HuggingFace bowang-lab/ecg-fm)에서 1회 취득하고 어댑터만 전달 가능.
+
 ---
 
 ## 단계 4 — CPSC 2018 이진 라벨 매핑 (2026-05-24)
@@ -122,33 +134,14 @@
 - **대안**: p=0.3 (보수적), p=0.7 (적극적)
 - **이유**: ECG-FM 사전학습(Oh et al. CHIL 2022)에서 채택된 기본값과 동일하게 설정 — fine-tuning 중 사전학습 도메인 일관성 유지.
 - **영향**: 임의 N-lead 부분집합 입력 시나리오 모사 → 디바이스 독립 일반화
+- **측정된 가치 (2026-06-03 재점검)**: ③ multi-SNR 레시피서 RLM만 분리 시, 마진은 **단일리드+모션 구간에
+  집중**(1-lead/6dB ΔAUROC +0.017·ΔSens@95Sp +0.096), full-clean·full-lead서 ≈0. 강건성 주동력은
+  백본 사전학습 + multi-SNR이며 파인튜닝 RLM은 **보강(safety margin)** — 상세 `records/03 ⑥-c`.
 
 ### 실행 중 버그 수정: LoRALinear bias/weight property
 
 - **문제**: `multi_head_attention.py:170`에서 `q_proj.bias` 직접 접근 → `AttributeError`
 - **해결**: LoRALinear에 `weight`·`bias` property 추가 → `self.linear`로 proxy
-
----
-
-## 단계 7 — 신호품질 게이트 설계 확정 (2026-05-25)
-
-- **초기 설계안**: per-lead 1D CNN, 윈도우마다 {use/mask/alert} 3분류
-- **실제 구현**: ECG-FM 동결(frozen) + Linear(768→1), record-level 이진 분류 (양호/불량)
-- **대안**: per-lead 1D CNN (원래 계획)
-
-### 변경 이유 (두 가지)
-
-**① 데이터 한계** (출처: `scripts/preflight_1_physionet2011.py` 실행 결과, 2026-05-25 — `records/04_run_history.md` Pre-flight 1):
-- PhysioNet 2011 공식 release에 per-channel grade (A/B/C/D/F) **미제공**
-- record-level acceptable/unacceptable 라벨만 존재 → per-lead CNN 학습용 gold label 부재
-
-**② 백본 재사용 효율**:
-- 응급 탐지(단계 5·6)와 동일 ECG-FM 백본을 동결 재사용 → 별도 특징 추출 불필요
-- 추론 시 forward pass 1회로 게이트 임베딩 + 응급 탐지 동시 처리 가능 (McKeen et al. JAMIA 2025)
-- ECG-FM 입력 형식(12-lead, 500Hz, 5000샘플)과 PhysioNet 2011 형식 완벽 일치
-
-- **영향**: gate = ECG-FM(frozen) → mean pool → Linear(768→1), pos_weight=n_acceptable/n_unacceptable
-- 체크포인트: `outputs/gate/gate_best.pt` (epoch 49, val AUROC=0.7898, test AUROC=0.8406)
 
 ---
 
@@ -185,14 +178,13 @@
 
 ## 단계 4 보완 — CACHET patient-level split 설계 확정 (2026-05-25)
 
-- **선택 A**: CACHET(1602개) → stage 9 inference-only held-out 전용. stage 7 게이트 학습에는 미사용.
-- **대안**: Full Format(16.5GB) 다운로드 → patient-level split → gate + held-out 분리
+- **선택 A**: CACHET(1602개) → stage 9 inference-only held-out 전용. 학습에는 미사용.
+- **대안**: Full Format(16.5GB) 다운로드 → patient-level split → 학습 + held-out 분리
 - **이유**:
   1. Short Format에 patient ID 없음 → strict patient-level split 불가
-  2. PhysioNet 2011이 12-lead·500Hz·5000샘플로 ECG-FM 입력 완벽 일치 — 게이트 학습 더 적합
-  3. "게이트=임상 PhysioNet 2011, 외부검증=웨어러블 CACHET" 도메인 완전 분리 → 데이터 누출 없는 엄격한 외부 검증 환경 확보
-  4. patient-level leakage 논란 원천 차단
-- **영향**: 단계 5·6·8은 CPSC만 → 재작업 불필요. 단계 7은 PhysioNet 2011만.
+  2. CACHET을 held-out 전용으로 둬 외부검증 도메인 분리 확보 → 데이터 누출 없는 엄격한 외부 검증 환경
+  3. patient-level leakage 논란 원천 차단
+- **영향**: 단계 5·6·8은 CPSC만 → 재작업 불필요.
 
 ### CACHET 라벨 → 단계 9 매핑
 
@@ -309,7 +301,6 @@ LTST는 레코드당 21~45시간 × 250Hz = 최대 40,500,000 샘플. 원래 전
 | CACHET-CADB | 1024Hz | `resample(10240, 5000)` — 10240→5000 샘플 |
 | INCART | 257Hz | `resample(T, T_out)` — 257→500Hz |
 | LTST | 250Hz | `resample_poly(up=2, down=1)` — 250→500Hz |
-| PhysioNet 2011 | 500Hz | 그대로 사용 |
 
 ---
 
@@ -398,8 +389,7 @@ Phase 1에서 독립적으로 최적화된 두 모델이 완성됨:
 ```
 입력 ECG (12, 5000)
     ├──→ ECG-FM+LoRA(③) → embedding_A(768) → BinaryHead  → emergency_score
-    ├──→ ECG-FM+LoRA(5b) → embedding_B(768) → MCHead      → cardiac_probs
-    └──→ ECG-FM+Linear(gate)               →             → reliability
+    └──→ ECG-FM+LoRA(5b) → embedding_B(768) → MCHead      → cardiac_probs
 ```
 
 - 장점: 각 모델이 태스크별로 독립 최적화 → 개별 성능 최고
@@ -411,10 +401,9 @@ Phase 1에서 독립적으로 최적화된 두 모델이 완성됨:
 입력 ECG (12, 5000)
     └──→ ECG-FM+LoRA(5d) → embedding(768) ┬→ BinaryHead  → emergency_score
                                            └→ MCHead      → cardiac_probs
-    + ECG-FM+Linear(gate)                 →              → reliability
 ```
 
-- 장점: embedding 단일, P2 입력 명확 / forward 1회(gate 제외) / 설계 일관성
+- 장점: embedding 단일, P2 입력 명확 / forward 1회 / 설계 일관성
 - 단점: 이진·다중 태스크 trade-off로 개별 성능이 분리 모델 대비 약간 낮을 수 있음
 
 ### Embedding 문제 — Path A의 핵심 설계 이슈

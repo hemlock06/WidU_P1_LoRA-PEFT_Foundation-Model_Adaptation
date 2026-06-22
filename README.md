@@ -7,7 +7,7 @@
 
 정적 임상 12-lead로 사전학습된 ECG-FM을 **LoRA(0.33% 파라미터)** 로 적응하고,
 **multi-SNR 모션 증강 + RLM 가변 lead 마스킹** 으로 웨어러블 노이즈·lead 부족에 강건하게 만든다.
-단일 백본에서 **이진 응급 점수 + 5-class 심장 분류 + 신호 신뢰도** 를 동시 출력하여 P2 융합 모듈로 전달한다.
+단일 백본에서 **이진 응급 점수 + 5-class 심장 분류** 를 동시 출력하여 P2 융합 모듈로 전달한다.
 
 ---
 
@@ -19,7 +19,6 @@
 | **모션 강건성** | NSTDB 기반 SNR {24,18,12,6,0}dB 합성 증강 → −6dB에서 AUROC +4.3%p 유지 |
 | **N-lead 강건성** | RLM(Random Lead Masking p=0.5) → 1-lead 입력에서도 AUROC 0.9408 유지 |
 | **단일 백본 다중 출력** | 이진 헤드 + 5-class 헤드 공유 (forward 1회, embedding 1개) — P2 인터페이스 정합 |
-| **모달리티 신뢰도 게이트** | ECG-FM frozen + Linear → 연속 신뢰도(use/mask/alert) — P2 ECG 가중치 공급 |
 | **적용 범위 경계 정의** | inter-patient 학습의 도메인 일반화 범위를 4개 외부 DB로 실증 |
 
 ---
@@ -37,8 +36,6 @@ ECG 입력 (12-lead · 500Hz · 10s · N-lead 0-fill)
           ├── BinaryHead (768→1) → emergency_score
           ├── MCHead     (768→5) → cardiac_probs[5]
           └── mean-pool  z[768]  → embedding
-          │
-  (병렬) ECG-FM frozen → Linear(768→1) → reliability → use/mask/alert
           │
           ▼
   P1 Output Bundle → Project 2 (멀티모달 융합)
@@ -62,7 +59,6 @@ ECG 입력 (12-lead · 500Hz · 10s · N-lead 0-fill)
 | 전도장애 | AUROC | 0.9577 |
 | NSR | AUROC | 0.9304 |
 | 이소성(PAC/PVC) | AUROC | 0.8634 |
-| 신호품질 게이트 | AUROC | 0.8406 |
 
 ### 단일 이진 모델 참조 (③ LoRA+RLM+multi-SNR)
 
@@ -97,14 +93,11 @@ ECG 입력 (12-lead · 500Hz · 10s · N-lead 0-fill)
   "cardiac_probs":   [NSR, AF, Ischemia, Conduction, Ectopic],
   "emergency_score": 0.91,
   "embedding":       [768개 float],
-  "reliability":     0.18,
-  "gate_tier":       "use",
   "physio":          {"hr_bpm": 73.2, "rhythm_regularity": 0.91},
   "model_version":   "lora_multitask_snr_a07_e18"
 }
 ```
 
-게이트 임계값: `use` < 0.2155 ≤ `mask` < 0.4753 ≤ `alert`
 상세 명세: [records/00_research_plan.md §5](records/00_research_plan.md)
 
 ---
@@ -120,7 +113,6 @@ ECG 입력 (12-lead · 500Hz · 10s · N-lead 0-fill)
 - [x] multi-SNR 증강 통합 (−6dB +4.3%p AUROC, Sens@95Sp +16.4%p)
 - [x] SNR 저하 곡선 평가 (강건성 정량화)
 - [x] N-lead 강건성 ablation (1-lead까지 AUROC 0.94)
-- [x] 신호품질 게이트 (PhysioNet 2011, AUROC 0.8406, 3단 임계값 산출)
 - [x] 외부검증 4종 (CACHET · INCART · STAFF-III · LTST)
 - [x] PTB-XL 혼합 학습 — 외부 척도 확장 검증
 - [x] 단일 백본 멀티태스크 설계 (Path B: BinaryHead + MCHead)
@@ -144,4 +136,3 @@ ECG 입력 (12-lead · 500Hz · 10s · N-lead 0-fill)
 - LoRA: Hu et al., ICLR 2022
 - RLM: Oh et al., CHIL 2022 (arXiv 2203.06889)
 - Multi-SNR: MDPI Sensors 26(4):1135, 2026
-- Signal Quality: Mondal 2025 (Biomed Signal Process Control)

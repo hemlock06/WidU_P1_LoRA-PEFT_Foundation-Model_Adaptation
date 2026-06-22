@@ -1,7 +1,7 @@
 # 연구계획서 (Research Plan)
 
 > 본 문서는 3-프로젝트 로드맵에서 **Project 1(ECG 모듈)**의 산출물 설계 및 단계별 계획을 기술한 마스터 계획서다.
-> Project 1 출력: 심장 다중분류 + 이진 응급 점수 + ECG-FM 임베딩 + 신호 신뢰도
+> Project 1 출력: 심장 다중분류 + 이진 응급 점수 + ECG-FM 임베딩
 
 ---
 
@@ -9,7 +9,7 @@
 
 | 프로젝트 | 역할 | 입력 | 출력 |
 |---|---|---|---|
-| **Project 1 (현재)** | 심전도 분석 | 12/N-lead ECG | 심장 다중분류 + 이진 응급 + 임베딩 + 신뢰도 |
+| **Project 1 (현재)** | 심전도 분석 | 12/N-lead ECG | 심장 다중분류 + 이진 응급 + 임베딩 |
 | **Project 2 (차기)** | 멀티모달 융합 | P1 출력 + 자이로(스마트폰) + SpO2(스마트워치) | 응급 **원인** 다면 분류 (심혈관/외부충격/저산소 등) |
 | **Project 3 (최종)** | XAI 설명 | P2 결과 | 누구나 이해 가능한 근거 설명 |
 
@@ -39,8 +39,7 @@ Project 1은 "이상/정상 1비트"가 아니라 융합·XAI가 활용할 **다
 | 1 | **심장 다중분류 확률벡터** | softmax (5-class) | "어떤 심장 이벤트인가" 구체 원인 → XAI 설명 |
 | 2 | **이진 응급 점수** | sigmoid (1) | 이상/정상 직관 전달 (헤드라인·강건성 지표) |
 | 3 | **ECG-FM 임베딩** | float (768) | 융합 모델의 풍부한 잠재 입력 |
-| 4 | **신호 신뢰도 점수** | float (0~1, 게이트) | ECG 채널 융합 가중치 (use/mask/alert) |
-| 5 | 파생 생리지표 | 심박·리듬 규칙성 | 자이로·SpO2와 교차맥락 (심박↑+움직임↑=운동) |
+| 4 | 파생 생리지표 | 심박·리듬 규칙성 | 자이로·SpO2와 교차맥락 (심박↑+움직임↑=운동) |
 
 ### 심장 다중분류 taxonomy (CPSC 2018 native 라벨 재활용 — 신규 수집 0)
 
@@ -68,28 +67,9 @@ Project 1은 "이상/정상 1비트"가 아니라 융합·XAI가 활용할 **다
 | 5 | LoRA + RLM + multi-SNR | 완료 | −6dB +4.3%p AUROC |
 | 5b | **심장 다중분류 헤드 추가** | 완료 (2026-05-26) | Macro-F1=0.6762, 이진AUROC=0.9263, AF AUROC=0.9756 |
 | 6 | SNR 저하 곡선 | 완료 | 모션 강건성 입증 |
-| 7 | 신호품질 게이트 | 완료 | ECG-FM+Linear AUROC 0.84 |
-| 7b | **게이트 → 연속 신뢰도 + 3단 임계값** | 신규 | use/mask/alert 임계값 레이어 (재구축 불요) |
 | 8 | 외부검증 (CACHET/INCART/STAFF-III/LTST) | 완료 | LTST AUROC 역전 패턴 — 한계 문서화 |
 | 9 | N-lead 강건성 ablation | 완료 | 1-lead까지 AUROC 0.94 |
 | 10 | **다중분류 평가 + 인터페이스 명세** | 신규 | per-class 지표 완료, P2 인터페이스 포맷 확정 필요 |
-
----
-
-## 3. 게이트 설계 — ECG 모달리티 신뢰도 공급자
-
-**융합 시스템에서 게이트 = "ECG 모달리티 신뢰도 공급자"** 로 설계된다.
-단순 품질 이진 필터를 넘어 P2의 모달리티 가중치 입력으로 기능한다.
-
-| 게이트 출력 (연속 0~1 임계값) | 융합 동작 |
-|---|---|
-| **use** (신뢰도 高) | ECG 가중치 크게 |
-| **mask** (일부 lead 불량) | 가용 lead만, 가중치 中 |
-| **alert** (신뢰도 低) | 자이로·SpO2로 무게 이동 |
-
-- 현 ECG-FM+Linear 게이트(AUROC 0.84)가 이미 **연속 확률**을 출력 → 신뢰도 점수 v1로 직접 재해석.
-- per-lead 1D CNN 재구축 불요 (PhysioNet 2011 per-channel 라벨 부재 한계 회피).
-- {use/mask/alert} 3단 임계값 레이어는 멀티모달 맥락에서 ECG 채널 가중치 분기 기준으로 활용된다.
 
 ---
 
@@ -97,9 +77,8 @@ Project 1은 "이상/정상 1비트"가 아니라 융합·XAI가 활용할 **다
 
 | 항목 | 초기 고려 사항 | 채택 설계 | 근거 |
 |---|---|---|---|
-| Project 1 출력 | 이상/정상 이진 단일 출력 | 심장 다중분류 + 이진 병행 + 신뢰도 | P2/P3 설명력 확보 — 단순 이진 판정보다 원인 정보가 융합·XAI에 필수 |
+| Project 1 출력 | 이상/정상 이진 단일 출력 | 심장 다중분류 + 이진 병행 | P2/P3 설명력 확보 — 단순 이진 판정보다 원인 정보가 융합·XAI에 필수 |
 | 5분류 응급 원인 | ECG 단일 모달로 전부 분류 | **심장 계열만 P1, 나머지는 P2 융합 출력** | 외부충격·산소저하는 ECG로 관측 불가 — 모달리티 충돌·라벨 노이즈 방지 |
-| 신호품질 게이트 출력 | per-lead 1D CNN + {use/mask/alert} 이진 출력 | ECG-FM+Linear 연속 신뢰도 점수 + 임계값 레이어 | per-channel 라벨 부재 + ECG-FM 백본 재사용 + P2 가중치 입력 역할 |
 | 신호 입력 형식 | dECG(미분 신호) | 원신호 (ECG-FM mV 원시 입력) | ECG-FM 사전학습 입력과 일치 — 미분 시 표현 손상 |
 
 ---
@@ -132,17 +111,6 @@ P1_output = {
     "embedding": List[float],       # 길이 768, L2 정규화 없음 (raw mean-pool)
     # 용도: P2 멀티모달 융합 입력, P3 XAI 유사도 검색
 
-    # ── 신호 신뢰도 ────────────────────────────────────────────────
-    "reliability": float,           # 0~1 (높을수록 ECG 불량)
-    # 산출: gate_best.pt sigmoid 출력 (PhysioNet 2011 학습)
-    # AUROC: val=0.765, test=0.833
-
-    "gate_tier": str,               # "use" | "mask" | "alert"
-    # 임계값 (gate_thresholds.npz, 결정성 고정 seed=42):
-    #   use   : reliability < t_mask  (= 0.2155, val_양호_p75)
-    #   mask  : t_mask ≤ reliability < t_alert
-    #   alert : reliability ≥ t_alert (= 0.4753, val_양호_p90, spec≈0.90)
-
     # ── 파생 생리지표 ───────────────────────────────────────────────
     "physio": {
         "hr_bpm": float,            # 심박수 (bpm). 계산: 60 / mean(R-R intervals@500Hz)
@@ -168,8 +136,6 @@ P1_output = {
   "cardiac_probs":    [0.02, 0.87, 0.08, 0.02, 0.01],
   "emergency_score":  0.91,
   "embedding":        [0.031, -0.142, ...],
-  "reliability":      0.18,
-  "gate_tier":        "use",
   "physio":           {"hr_bpm": 73.2, "rhythm_regularity": 0.91},
   "model_version":    "lora_multitask_snr_a07_e22",
   "inference_ms":     47.3
@@ -183,8 +149,6 @@ np.savez("p1_batch.npz",
     cardiac_probs   = arr_float32_Nx5,
     emergency_score = arr_float32_N,
     embedding       = arr_float32_Nx768,
-    reliability     = arr_float32_N,
-    gate_tier       = arr_str_N,           # dtype='U8'
     hr_bpm          = arr_float32_N,
     rhythm_regularity = arr_float32_N,
     record_ids      = arr_str_N,
@@ -198,21 +162,14 @@ np.savez("p1_batch.npz",
 
 P2(멀티모달 융합 모델)가 P1 출력을 소비할 때 지켜야 할 규약:
 
-| P1 필드 | P2 사용 방식 | gate_tier 조건 |
-|---|---|---|
-| `emergency_score` | ECG 응급 채널 (헤드라인) | gate_tier = "use"/"mask" 시 사용, "alert" 시 무시 |
-| `cardiac_probs` | 심장 원인 분류 (XAI 설명) | gate_tier = "use" 시 전체 사용, "mask" 시 참고만 |
-| `embedding` | 융합 입력 (768-dim 잠재 벡터) | gate_tier 무관 — 모달리티 가중치로 보정 |
-| `reliability` | ECG 모달리티 가중치 `w_ecg = 1 - reliability` | 항상 사용 (연속 가중치) |
-| `gate_tier` | 이산 라우팅 분기 | "alert" → 자이로·SpO2로 무게 이동 |
-| `physio.hr_bpm` | 자이로 활동량과 교차맥락 | null 허용 — null이면 다른 HR 소스로 대체 |
+| P1 필드 | P2 사용 방식 |
+|---|---|
+| `emergency_score` | ECG 응급 채널 (헤드라인) |
+| `cardiac_probs` | 심장 원인 분류 (XAI 설명) |
+| `embedding` | 융합 입력 (768-dim 잠재 벡터) |
+| `physio.hr_bpm` | 자이로 활동량과 교차맥락 (null 허용 — null이면 다른 HR 소스로 대체) |
 
-**ECG 모달리티 가중치 예시**:
-```python
-w_ecg = 1.0 - p1["reliability"]           # 0.0(불량) ~ 1.0(양호)
-w_ecg *= 0.0 if p1["gate_tier"] == "alert" else 1.0  # alert 시 차단
-fusion_input = w_ecg * p1["embedding"] + (1 - w_ecg) * other_modality_emb
-```
+**P2 융합 입력**: P1 임베딩·점수를 그대로 전달하고, 모달리티 가중은 P2 내부의 신뢰도(conf) 게이팅이 담당한다.
 
 ---
 
@@ -254,7 +211,6 @@ def compute_physio(ecg_12lead: np.ndarray, fs=500) -> dict:
 | 다중분류 5-class softmax | `lora_mc_best.pt` — CPSC만 사용 | △ 부분 충족 |
 | 이진 응급 score | `lora_multisnr_best.pt` (단일) 또는 `lora_mixed_best.pt` (혼합) | 충족 |
 | ECG-FM 임베딩 (768) | 백본별로 추출 가능 | 충족 |
-| 신호 신뢰도 (게이트) | `gate_best.pt` AUROC 0.8406 | 충족 |
 | 파생 생리지표 (HR/리듬) | 미구현 | 단계 10에서 |
 
 ### Phase 1 자산과 Phase 2 목표 간 현황

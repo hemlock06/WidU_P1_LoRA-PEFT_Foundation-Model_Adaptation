@@ -7,13 +7,7 @@
 
 ## 미결 과제 (P2 착수 전 선택적)
 
-### 게이트 모델 LoRA 파인튜닝 (3b)
-
-- **상황**: 현 게이트 = ECG-FM frozen + Linear probe, AUROC=0.8406.
-- **병목 확인**: 7b 분석에서 임계값 튜닝은 zero-sum (양호 use↑ = 불량 오인↑). 게이트 AUROC 자체가 병목.
-- **개선 여지**: 이진 헤드 전례(linear 0.9398→LoRA 0.9477)로 보아 게이트도 LoRA 파인튜닝 시 0.84 상회 예상.
-- **조치**: `scripts/train_gate_lora.py` 신규 + PhysioNet 2011 재학습 → 7b 임계값 재산출.
-- **우선순위**: P1 완료 후 선택. P2 멀티모달 융합에서 ECG 가중치 품질에 직결.
+현재 미결 과제 없음 — P1 완료.
 
 ---
 
@@ -33,19 +27,11 @@
 - 손실 가중치 α=0.7 확정: BCE 그래디언트 지배 → z "응급 축" 정렬 → MacroF1 향상 (그래디언트 간섭 해소).
 - 상세: `records/01_design_decisions.md §α=0.7`, `records/03 §5f`
 
-### 게이트 3단 임계값 (완료, 2026-05-29)
-
-**결정**: t_mask=0.2155 (val 양호 p75), t_alert=0.4753 (val 양호 p90, spec≈0.90), 결정성 고정.
-- 5-28 초기 산출 교체: (1) 비결정 추론 → 재현불가, (2) Youden J 피레토 지배점 교체.
-- trade-off: t_mask↑는 양호 use(+6%p) ↔ 불량 오인(+4개) — zero-sum. 현 운영점 유지.
-- 상세: `records/03 §7b`, `outputs/gate/gate_thresholds.npz`
-
 ### P1→P2 인터페이스 명세 Stage 10 (완료, 2026-05-29)
 
 **결정**: `records/00_research_plan.md §5` 완전 확정.
-- 출력 5종: cardiac_probs[5] · emergency_score · embedding[768] · reliability · gate_tier
+- 출력 4종: cardiac_probs[5] · emergency_score · embedding[768] · physio
 - 직렬화: 실시간=JSON, 배치=npz
-- gate 임계값: t_mask=0.2155, t_alert=0.4753
 - physio 계산: HR(R-R 기반), rhythm_regularity(sdNN 기반) — `physio_features.py` 미구현 (future)
 
 ### 다중분류 이소성 표현 천장 (완료, 2026-05-29)

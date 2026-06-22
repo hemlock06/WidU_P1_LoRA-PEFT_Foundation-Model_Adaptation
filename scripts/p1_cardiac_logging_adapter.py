@@ -12,7 +12,7 @@ P1 cardiac 로깅 어댑터 — 로깅 §2 스키마 레코드 생성
 
 입력: ecg = (2,5000)[II,V2] 또는 (12,5000). 2리드(II→slot1, V2→slot7).
 정직 캐비엇: 모든 cardiac 검증은 단일리드(II) 기준. 2리드(II+V2) 성능은 ≥ 기대되나
-            reliability·임계는 단일리드 학습 → 2리드 실데이터로 재검증 필요.
+            2리드 실데이터로 재검증 필요.
 """
 from __future__ import annotations
 import os, sys
@@ -25,7 +25,7 @@ from p1_cardiac_channel import P1CardiacChannel, LEAD   # LEAD=1 (slot II)
 V2_SLOT = 7
 FS = 500
 CARDIAC_PROB_NAMES = ["nsr", "af", "isch", "cond", "ecto"]
-MODEL_VERSION = "lora_multitask_snr_a07+relhead_v1"
+MODEL_VERSION = "lora_multitask_snr_a07"
 
 
 def estimate_physio(lead_ii: np.ndarray, fs: int = FS):
@@ -80,8 +80,6 @@ class CardiacLoggingAdapter:
             "emergency_score":   float(out["emergency_score"]),
             **{f"cardiac_p_{n}": float(out["cardiac_probs"][i])
                for i, n in enumerate(CARDIAC_PROB_NAMES)},
-            "reliability":       float(out["reliability"]),
-            "effective_cardiac": float(out["effective_cardiac"]),
             "benign_flag":       bool(out["benign_flag"]),
             "hr_bpm":            hr,
             "rhythm_regularity": rhythm,
@@ -103,8 +101,8 @@ if __name__ == "__main__":
             for i in range(3)]
     print("P1 cardiac 로깅 레코드 데모 (CACHET 3 윈도우, raw 제외)")
     for r in recs:
-        print(f"  t={r['master_clock_ms']}ms eff={r['effective_cardiac']:.3f} "
-              f"rel={r['reliability']:.3f} hr={r['hr_bpm']:.0f} "
+        print(f"  t={r['master_clock_ms']}ms emergency={r['emergency_score']:.3f} "
+              f"hr={r['hr_bpm']:.0f} "
               f"p_af={r['cardiac_p_af']:.2f} benign={r['benign_flag']}")
     print("  레코드 키:", list(recs[0].keys()))
     # raw 포함 1개 → 크기 확인
@@ -115,7 +113,7 @@ if __name__ == "__main__":
     try:
         import pandas as pd
         df = pd.DataFrame([{k: v for k, v in r.items()} for r in recs])
-        out = r"outputs/gate/_cardiac_log_demo.parquet"
+        out = r"outputs/_cardiac_log_demo.parquet"
         df.to_parquet(out)
         print(f"  parquet 데모 저장: {out} ({len(df)} rows, {df.shape[1]} cols)")
     except Exception as e:
