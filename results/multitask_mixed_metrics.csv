@@ -1,0 +1,14 @@
+metric,value
+tag,mixed
+noise_mode,mixed
+epoch,26
+bin_auroc,0.9117
+bin_f1,0.7898
+bin_sens95,0.6754
+macro_f1,0.6792
+weighted_f1,0.7512
+auroc_정상(NSR),0.9298
+auroc_AF,0.9631
+auroc_급성허혈(STD/STE),0.8994
+auroc_전도장애(I-AVB/LBBB/RBBB),0.9562
+auroc_이소성(PAC/PVC),0.8532
