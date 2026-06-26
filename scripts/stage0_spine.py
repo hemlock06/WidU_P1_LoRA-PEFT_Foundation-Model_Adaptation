@@ -25,7 +25,7 @@ CKPT_P1   = r"outputs/lora_multitask_snr_a07/lora_multitask_snr_best.pt"
 CACHET    = r"data/processed/cachet"
 CPSC_MC   = r"data/processed/cpsc2018_mc/test"
 NSTDB     = r"data/raw/nstdb"
-PTT       = r"../WidU_multimodal_fusion/raw/ptt_ppg"
+PTT       = r"../WidU_multimodal_fusion_git/data/raw/ptt_ppg"
 LEAD = 1  # slot II = 패치 단일리드
 
 def set_det(s=42):

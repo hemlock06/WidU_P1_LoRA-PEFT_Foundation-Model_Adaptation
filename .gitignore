@@ -28,6 +28,7 @@ outputs/
 checkpoints/
 *.ckpt
 logs/
+_portfolio_tmp/
 
 # IDE
 .vscode/
