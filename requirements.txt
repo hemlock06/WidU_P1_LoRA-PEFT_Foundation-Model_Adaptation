@@ -1,0 +1,46 @@
+# =============================================================================
+# WidU P1 — ECG-FM 응급 심장 이상 탐지 · 의존성 핀 파일
+# =============================================================================
+# 목적: 재현성 보장(HANDOFF_ISSUES.md P1-1 / REPRODUCIBILITY.md §1·§8-1).
+#
+# 검증 상태 표기:
+#   [PIN]  = 레포 문서에 버전이 명시됨 → 정확히 핀 고정.
+#   [NAME] = 런타임에 import되나 버전이 어디에도 기록되지 않음 → 추측 금지로
+#            이름만 명시(버전 미고정). 통합 시 검증 환경의 실제 버전으로 핀 권장.
+#
+# 출처: README.md, docs/REPRODUCIBILITY.md §1, docs/ARCHITECTURE.md,
+#       scripts/verify_env.py, 각 scripts/*.py 의 실제 import.
+# 검증 환경(문서 기록): RTX 3060 12GB · Python 3.9 · PyTorch 2.1.2+cu118.
+# -----------------------------------------------------------------------------
+
+# ── [PIN] PyTorch (cu118 빌드) ────────────────────────────────────────────────
+# README.md L107 / REPRODUCIBILITY §1: "PyTorch 2.1.2+cu118".
+# cu118 로컬버전 휠은 PyTorch 전용 인덱스가 필요하다.
+# (CPU 전용/다른 CUDA 환경이면 이 두 줄을 환경에 맞게 교체할 것.)
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch==2.1.2+cu118
+
+# ── [PIN] wfdb ────────────────────────────────────────────────────────────────
+# REPRODUCIBILITY §1: "wfdb(4.3.1)". PhysioNet 레코드 I/O(전처리·다운로드).
+wfdb==4.3.1
+
+# ── [NAME] 버전 미기록 런타임 의존성 (추측 금지 — 이름만 명시) ──────────────────
+# 검증 환경의 실제 설치 버전으로 통합 시 핀 고정 권장.
+numpy            # 전 스크립트 공통 (신호·라벨 배열)
+scipy            # multisnr(resample_poly) · logging_adapter(find_peaks)
+scikit-learn     # eval_*/stage0_spine/analyze_* 지표(AUROC 등)
+h5py             # preprocess_cachet/sph · download_cachet (HDF5)
+pandas           # preprocess_ptbxl(메타) · logging_adapter parquet 데모
+requests         # download_cpsc2018 (다운로드)
+tqdm             # download_cpsc2018 (진행률)
+
+# ── [선택] 런타임 가드된(없으면 기능만 생략) 의존성 ─────────────────────────────
+matplotlib       # eval_snr_curve/ablation_nlead_curve 차트(없으면 차트 생략·경고)
+pyarrow          # pandas.to_parquet 엔진 (logging_adapter parquet 출력 시 필요)
+
+# ── [외부] pip 미설치 — 별도 절차 ──────────────────────────────────────────────
+# fairseq_signals: ECG-FM 백본 로더. PyPI 미배포 — clone 후 패치+editable 설치.
+#   git clone https://github.com/Jwoo5/fairseq-signals.git
+#   git checkout f8f0ff1c788a82c2059cb452cd5462898867489e
+#   git apply patches/lora_fairseq_signals.patch && pip install --editable ./
+#   (상세: REPRODUCIBILITY.md §2)

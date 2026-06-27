@@ -8,7 +8,7 @@ P1 cardiac 채널 — 추론 인터페이스 (검증된 단일 진입점)
     from p1_cardiac_channel import P1CardiacChannel
     ch = P1CardiacChannel(device="cuda")
     out = ch.infer(signal_12x5000)   # (12,5000) 또는 (N,12,5000)
-    # out = {emergency_score, cardiac_probs[5], benign_flag}
+    # out = {emergency_score, cardiac_probs[5], benign_flag, embedding[768]}
     # 다운스트림: cardiac 경보 if out["emergency_score"] >= tau_c (실데이터 튜닝)
 
 입력 규격: 단일리드는 ECG-FM 슬롯1(II)에 실어 0-fill된 (12,5000). 12리드면 그대로.
@@ -16,6 +16,8 @@ P1 cardiac 채널 — 추론 인터페이스 (검증된 단일 진입점)
     emergency_score   : sigmoid, AF/cardiac 응급 확률
     cardiac_probs[5]  : [NSR,AF,Ischemia,Conduction,Ectopic] softmax (유형)
     benign_flag       : 우세 유형 ∈ {전도장애,이소성} (비정상이나 양성 — 결정적)
+    embedding[768]    : mean-pool 백본 임베딩 z (P2 융합 입력; HANDOFF_ISSUES P0-3).
+                        헤드 입력으로 이미 계산되는 값을 추가 연산 없이 노출만 한다.
 """
 
 from __future__ import annotations
@@ -113,12 +115,17 @@ class P1CardiacChannel:
 
     @torch.no_grad()
     def infer(self, signal, batch_size: int = 32) -> dict:
-        """signal: (12,5000) 또는 (N,12,5000) float. 반환: 채널 출력 dict(스칼라 또는 배열)."""
+        """signal: (12,5000) 또는 (N,12,5000) float. 반환: 채널 출력 dict(스칼라 또는 배열).
+
+        반환 키: emergency_score, cardiac_probs[5], benign_flag, embedding[768].
+        embedding 은 두 헤드 입력으로 이미 계산되는 mean-pool 임베딩을 노출만 한 것이다
+        (추가 forward·연산 없음; P2 융합 입력 — HANDOFF_ISSUES P0-3).
+        """
         x = np.asarray(signal, dtype=np.float32)
         single = x.ndim == 2
         if single:
             x = x[None]
-        es, cp = [], []
+        es, cp, zb = [], [], []
         for i in range(0, len(x), batch_size):
             xb = torch.tensor(x[i : i + batch_size], device=self.device)
             emb = self.bb(source=xb, padding_mask=None, features_only=True)["x"].mean(
@@ -126,10 +133,17 @@ class P1CardiacChannel:
             )  # (b,768)
             es.append(torch.sigmoid(self.hb(emb)).cpu().numpy())
             cp.append(torch.softmax(self.hm(emb), -1).cpu().numpy())
+            zb.append(emb.cpu().numpy())  # (b,768) 임베딩 z — 노출용 누적
         es = np.concatenate(es)
         cp = np.concatenate(cp)
+        emb_all = np.concatenate(zb)  # (N,768)
         benign = np.isin(cp.argmax(1), [3, 4])  # 전도장애·이소성 우세 = 양성 비정상
-        out = {"emergency_score": es, "cardiac_probs": cp, "benign_flag": benign}
+        out = {
+            "emergency_score": es,
+            "cardiac_probs": cp,
+            "benign_flag": benign,
+            "embedding": emb_all,
+        }
         if single:
             out = {k: v[0] for k, v in out.items()}
         return out
