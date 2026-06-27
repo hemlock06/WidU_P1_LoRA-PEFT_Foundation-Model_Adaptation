@@ -23,7 +23,6 @@ URL:  https://physionet.org/files/challenge-2020/1.0.2/training/cpsc_2018/
 
 import argparse
 import os
-import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from html.parser import HTMLParser

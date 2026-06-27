@@ -27,7 +27,7 @@ multi-label 축약(SPH는 multi-label): 우선순위 Ischemia(2) > AF(1) > Condu
 labels_bin: 응급=1 (AF·Ischemia = class {1,2}), 정상=0. — CPSC mc 규약과 동일.
 """
 from __future__ import annotations
-import argparse, os, sys, csv, io, tarfile, collections, random
+import argparse, os, sys, csv, collections
 
 import numpy as np
 
@@ -116,7 +116,7 @@ def analyze(meta_path):
     print(f"  사용 가능       {used:>8}  (전체의 {100*used/n:.1f}%)")
     print(f"  응급(AF+허혈)   {n_emerg:>8}  | 정상/기타 {used-n_emerg:>8}")
     print(f"  다중대상(축약 전 1~4 ≥2) {multi}  ({100*multi/n:.1f}%)")
-    print(f"  레코드 길이 분포(N): " + ", ".join(f"{k}={v}" for k, v in sorted(lens.items())[:8]))
+    print("  레코드 길이 분포(N): " + ", ".join(f"{k}={v}" for k, v in sorted(lens.items())[:8]))
     print()
     print("주: 우선순위 축약 Ischemia>AF>Conduction>Ectopic>NSR. 비대상/모호 코드 제외(-1).")
     return dist

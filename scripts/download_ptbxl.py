@@ -124,11 +124,11 @@ def download_records_direct(out_dir, n_workers=16):
     records_index_url = BASE_RECORDS_URL + "RECORDS"
     records_index_path = os.path.join(out_dir, "RECORDS")
     if not os.path.exists(records_index_path):
-        print(f"  RECORDS 인덱스 다운로드...", end="", flush=True)
+        print("  RECORDS 인덱스 다운로드...", end="", flush=True)
         urllib.request.urlretrieve(records_index_url, records_index_path)
         print(" 완료")
     else:
-        print(f"  RECORDS 인덱스: 이미 존재")
+        print("  RECORDS 인덱스: 이미 존재")
 
     with open(records_index_path, "r") as f:
         all_records = [line.strip() for line in f if line.strip()]

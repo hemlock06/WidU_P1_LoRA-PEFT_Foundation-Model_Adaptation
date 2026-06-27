@@ -239,7 +239,7 @@ def train(args):
     class_weights = torch.tensor(weights, dtype=torch.float32).to(device)
 
     print(f"[데이터] train={len(train_ds)}, val={len(val_ds)}, test={len(test_ds)}")
-    print(f"[클래스] 가중치 (역빈도):")
+    print("[클래스] 가중치 (역빈도):")
     for c in range(N_CLASSES):
         print(f"  [{c}] {CLASS_NAMES[c]:30s}: n={int(counts[c]):4d}  w={weights[c]:.4f}")
     print()

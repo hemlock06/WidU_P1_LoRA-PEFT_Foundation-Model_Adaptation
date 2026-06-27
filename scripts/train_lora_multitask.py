@@ -280,7 +280,7 @@ def train(args):
 
     print(f"[데이터] train={len(train_ds)}, val={len(val_ds)}, test={len(test_ds)}")
     print(f"         이진 응급={int(n_pos)}, 정상={int(n_neg)}, pos_weight={pos_weight.item():.3f}")
-    print(f"[다중분류 가중치]")
+    print("[다중분류 가중치]")
     for c in range(N_CLASSES):
         print(f"  [{c}] {CLASS_NAMES[c]:30s} n={int(counts[c]):4d}  w={mc_w[c]:.4f}")
     print()
@@ -297,7 +297,7 @@ def train(args):
 
     head_bin = BinaryHead().to(device)
     head_mc  = MulticlassHead().to(device)
-    print(f"       BinaryHead(768→1) + MulticlassHead(768→5) 추가")
+    print("       BinaryHead(768→1) + MulticlassHead(768→5) 추가")
 
     # warm start
     if args.warm_ckpt and os.path.exists(args.warm_ckpt):
@@ -314,7 +314,7 @@ def train(args):
         print(f"[Warm start] {args.warm_ckpt}")
         if isinstance(val_ref, float):
             print(f"             원본 val composite/AUROC={val_ref:.4f}")
-        print(f"             → 백본 LoRA + 이진/다중 head 재사용 (multi-SNR 추가 계속학습)")
+        print("             → 백본 LoRA + 이진/다중 head 재사용 (multi-SNR 추가 계속학습)")
     else:
         print("[Cold start] 모든 LoRA + head 랜덤 초기화")
     print()
@@ -331,11 +331,11 @@ def train(args):
     # ── multi-SNR 증강기 ─────────────────────────────────────────────────
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    print(f"[증강] NSTDB 노이즈 로드 + 500Hz 리샘플 중...")
+    print("[증강] NSTDB 노이즈 로드 + 500Hz 리샘플 중...")
     multisnr = MultiSNRNoise(nstdb_dir=args.nstdb_dir, snr_set=snr_set,
                              device=device, seed=args.seed,
                              noise_mode=args.noise_mode)
-    print(f"       pool 길이: "
+    print("       pool 길이: "
           + ", ".join(f"{t}={multisnr.noise_pool[t].shape[0]:,}"
                       for t in ("bw", "em", "ma")))
     print(f"       노이즈 모드: {args.noise_mode} "
@@ -499,8 +499,8 @@ def train(args):
                                 target_names=CLASS_NAMES, zero_division=0, digits=4))
     print()
     print("  [비교 기준]")
-    print(f"    5d (멀티헤드, no-SNR):         AUROC=0.9140, Macro-F1=0.6840 (cpsc_mc task)")
-    print(f"    5b 다중 단일 (lora_mc):        Macro-F1=0.6762, 이진파생=0.9263")
+    print("    5d (멀티헤드, no-SNR):         AUROC=0.9140, Macro-F1=0.6840 (cpsc_mc task)")
+    print("    5b 다중 단일 (lora_mc):        Macro-F1=0.6762, 이진파생=0.9263")
     print(f"  [5d+SNR 멀티헤드]            AUROC={res['bin_auroc']:.4f}, "
           f"Macro-F1={res['macro_f1']:.4f}")
     print()

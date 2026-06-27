@@ -141,7 +141,7 @@ def download_db(db_name: str):
     print(f"       저장 경로: {cfg['dest']}")
 
     # 검증: 몇 개 레코드 로드 테스트
-    print(f"\n[검증] 첫 3개 레코드 로드 테스트")
+    print("\n[검증] 첫 3개 레코드 로드 테스트")
     loaded = 0
     for rec in recs[:5]:
         local = os.path.basename(rec)

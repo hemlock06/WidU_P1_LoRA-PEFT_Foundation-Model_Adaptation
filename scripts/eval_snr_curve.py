@@ -90,7 +90,7 @@ def eval_at_snr(backbone, head, loader, device, multisnr, snr_db):
 def run_model(name, ckpt_path, args, device, test_loader, multisnr):
     print(f"\n[{name}] {ckpt_path}")
     if not os.path.exists(ckpt_path):
-        print(f"  [주의] 체크포인트 없음 — 스킵")
+        print("  [주의] 체크포인트 없음 — 스킵")
         return None
     backbone, head = load_lora_model(ckpt_path, args.ckpt_path, device)
     aurocs = []

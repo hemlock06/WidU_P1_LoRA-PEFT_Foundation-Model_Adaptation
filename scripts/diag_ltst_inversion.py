@@ -30,7 +30,6 @@ import sys
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -192,7 +191,7 @@ def test_a(backbone, head, device):
         print(f"    AF vs NSR AUROC       : {auroc_af:.4f}")
         print(f"    허혈 vs NSR AUROC     : {auroc_is:.4f}")
         if mask is not None:
-            print(f"  → lead 제한 시 허혈 AUROC 하락이 AF보다 크면 lead 국소성 확인")
+            print("  → lead 제한 시 허혈 AUROC 하락이 AF보다 크면 lead 국소성 확인")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -284,7 +283,7 @@ def test_c():
         print(f"    부호 분포: 양={( raw_nz>0).mean()*100:.1f}%  음={( raw_nz<0).mean()*100:.1f}%")
 
     # CPSC에서 slot 1,7 이외 lead의 비율 확인 (0-fill 없음 — 항상 12-lead)
-    print(f"\n  ※ CPSC는 12-lead 모두 유효. LTST는 slot 1,7만 유효, 나머지 0.")
+    print("\n  ※ CPSC는 12-lead 모두 유효. LTST는 slot 1,7만 유효, 나머지 0.")
     zero_ratio = (ltst_sigs[:, [i for i in range(12) if i not in LTST_ACTIVE_SLOTS], :] == 0).mean()
     print(f"  LTST 비활성 lead 0 비율: {zero_ratio*100:.1f}%")
 

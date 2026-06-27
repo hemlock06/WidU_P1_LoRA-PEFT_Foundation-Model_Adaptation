@@ -327,7 +327,7 @@ def main():
     print(f"    응급(허혈 ST): {n_emg}")
     print(f"    정상:          {n_nrm}")
     print(f"    제외:          {stat['exc_win']}")
-    print(f"  Lead 배치: ML2→슬롯1(II), MV2→슬롯7(V2), 나머지 0-fill")
+    print("  Lead 배치: ML2→슬롯1(II), MV2→슬롯7(V2), 나머지 0-fill")
     print(f"  출력 shape: {sig_arr.shape}  dtype={sig_arr.dtype}")
     print(f"  저장: {args.out_dir}")
     print()

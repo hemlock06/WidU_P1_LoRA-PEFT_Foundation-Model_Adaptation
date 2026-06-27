@@ -17,7 +17,6 @@ Pre-flight 2d: ECG-FM features_only=True 로 올바른 768-dim 임베딩 추출 
 """
 
 import argparse
-import os
 import traceback
 
 import numpy as np
@@ -84,7 +83,7 @@ def run_forward(model, x):
             if isinstance(out, dict):
                 # 모든 키와 shape 출력 (첫 번째 성공 케이스에서만)
                 if i <= 3:
-                    print(f"    출력 dict 키/shape:")
+                    print("    출력 dict 키/shape:")
                     for k, v in out.items():
                         if isinstance(v, torch.Tensor):
                             print(f"      '{k}': {tuple(v.shape)}")
@@ -184,7 +183,7 @@ def main():
 
     if emb12.shape[-1] != EMBED_DIM:
         print(f"  [주의] dim={emb12.shape[-1]} ≠ {EMBED_DIM}: 다른 출력 키를 얻은 것 같음.")
-        print(f"         위 '출력 dict 키/shape' 목록을 확인하세요.")
+        print("         위 '출력 dict 키/shape' 목록을 확인하세요.")
     print()
 
     # ── 0-fill 다중 lead 테스트 ──────────────────────────────────────
@@ -225,9 +224,9 @@ def main():
         # (T, B, 768) → (B, 768)
         pooled = emb12.mean(dim=0)
         print(f"  emb12.mean(dim=0) → shape={tuple(pooled.shape)} (B=1, C=768)")
-        print(f"  → 이 768-dim 벡터가 MLP 분류 헤드 입력이 됩니다.")
+        print("  → 이 768-dim 벡터가 MLP 분류 헤드 입력이 됩니다.")
     else:
-        print(f"  [주의] dim 불일치로 풀링 확인 스킵. 768-dim 출력 먼저 확보 필요.")
+        print("  [주의] dim 불일치로 풀링 확인 스킵. 768-dim 출력 먼저 확보 필요.")
 
     # ── 최종 판정 ────────────────────────────────────────────────────
     print()

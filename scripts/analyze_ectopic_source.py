@@ -30,7 +30,7 @@ from sklearn.metrics import roc_auc_score
 sys.path.insert(0, os.path.dirname(__file__))
 from eval_mc_fair_compare import (
     set_deterministic, inject_lora, load_ecgfm, BinaryHead, MulticlassHead,
-    MCDataset, infer, MODELS, CKPT_FM, DATA_DIR, N_CLASSES, CLASS_NAMES,
+    MCDataset, infer, MODELS, CKPT_FM, DATA_DIR,
 )
 
 RAW_DIR = "data/raw/cpsc2018"
@@ -115,7 +115,7 @@ def main():
     print(f"  · 164884008 보유:      {int(ve_any.sum())}")
     print(f"  · PAC/PVC 순수(VE 없음): {int(pp_pure.sum())}")
     print(f"  · 둘 다 보유:           {int((ecto & has_pp & has_ve).sum())}")
-    print(f"\n동반진단(≥2 클래스) 비율:")
+    print("\n동반진단(≥2 클래스) 비율:")
     for name, mask in [("PAC/PVC 순수", pp_pure), ("164884008 보유", ve_any)]:
         m = mask.sum()
         c = (mask & comorbid).sum()

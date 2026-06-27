@@ -99,7 +99,7 @@ def train(args):
     multisnr = MultiSNRNoise(nstdb_dir=args.nstdb_dir, snr_set=snr_set,
                              device=device, seed=args.seed,
                              noise_mode=args.noise_mode)
-    print(f"       pool 길이: "
+    print("       pool 길이: "
           + ", ".join(f"{t}={multisnr.noise_pool[t].shape[0]:,}"
                       for t in ("bw", "em", "ma")))
     print(f"       노이즈 모드: {args.noise_mode} "

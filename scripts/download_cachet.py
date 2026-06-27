@@ -114,8 +114,8 @@ def main():
     print("=" * 60)
     print("CACHET-CADB Short Format 다운로드")
     print("=" * 60)
-    print(f"출처: DTU Data (DOI: 10.11583/DTU.14547330.v1)")
-    print(f"용량: ~125 MB")
+    print("출처: DTU Data (DOI: 10.11583/DTU.14547330.v1)")
+    print("용량: ~125 MB")
     print(f"저장: {DEST}")
     print()
 
@@ -127,7 +127,7 @@ def main():
             print(f"[다운로드] {ZIP_NAME}")
             download_with_progress(DOWNLOAD_URL, zip_path, ZIP_NAME)
         else:
-            print(f"[스킵] zip 이미 존재")
+            print("[스킵] zip 이미 존재")
 
         print(f"[압축해제] {ZIP_NAME}")
         with zipfile.ZipFile(zip_path, "r") as zf:
@@ -135,7 +135,7 @@ def main():
             print(f"  zip 내 파일: {names}")
             zf.extractall(DEST)
         os.remove(zip_path)
-        print(f"  완료")
+        print("  완료")
 
     # ── 파일 크기 확인 ────────────────────────────────────────
     sz = os.path.getsize(hdf5_path)

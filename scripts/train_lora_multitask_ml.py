@@ -284,7 +284,7 @@ def train(args):
 
     print(f"[데이터] train={len(train_ds)}, val={len(val_ds)}, test={len(test_ds)}")
     print(f"         이진 응급={int(n_pos)}, 정상={int(n_neg)}, pos_weight={pos_weight.item():.3f}")
-    print(f"[multi-label 클래스별 pos_weight]")
+    print("[multi-label 클래스별 pos_weight]")
     for c in range(N_CLASSES):
         print(f"  [{c}] {CLASS_NAMES[c]:30s} n_pos={int(n_pos_c[c]):4d}  pos_w={mc_pos_weight[c].item():.3f}")
     print()
@@ -300,7 +300,7 @@ def train(args):
 
     head_bin = BinaryHead().to(device)
     head_mc  = MulticlassHead().to(device)
-    print(f"       BinaryHead(768→1) + MulticlassHead(768→5, sigmoid) 추가")
+    print("       BinaryHead(768→1) + MulticlassHead(768→5, sigmoid) 추가")
 
     if args.warm_ckpt and os.path.exists(args.warm_ckpt):
         warm = torch.load(args.warm_ckpt, map_location=device)
@@ -312,10 +312,10 @@ def train(args):
         if "head_mc_state" in warm and not args.fresh_mc_head:
             head_mc.load_state_dict(warm["head_mc_state"])
             print(f"[Warm start] {args.warm_ckpt}")
-            print(f"             백본 LoRA + head_bin + head_mc 재사용")
+            print("             백본 LoRA + head_bin + head_mc 재사용")
         else:
             print(f"[Warm start] {args.warm_ckpt}")
-            print(f"             백본 LoRA + head_bin 재사용, head_mc 신규 초기화")
+            print("             백본 LoRA + head_bin 재사용, head_mc 신규 초기화")
     else:
         print("[Cold start] 모든 LoRA + head 랜덤 초기화")
     print()
@@ -330,10 +330,10 @@ def train(args):
 
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    print(f"[증강] NSTDB 노이즈 로드 + 500Hz 리샘플 중...")
+    print("[증강] NSTDB 노이즈 로드 + 500Hz 리샘플 중...")
     multisnr = MultiSNRNoise(nstdb_dir=args.nstdb_dir, snr_set=snr_set,
                              device=device, seed=args.seed)
-    print(f"       pool 길이: "
+    print("       pool 길이: "
           + ", ".join(f"{t}={multisnr.noise_pool[t].shape[0]:,}"
                       for t in ("bw", "em", "ma")))
     print()
@@ -437,8 +437,8 @@ def train(args):
     print(f"    {'─ macro':<28}{res['macro_auroc']:>8.4f}{res['macro_f1']:>8.4f}")
     print()
     print("  [비교 기준 (구 단일라벨 5b/5d, 테스트셋 상이 — 근사)]")
-    print(f"    5b 단일:  Macro-F1=0.6762, 이소성 F1=0.3478, 이소성 AUROC=0.8620")
-    print(f"    5d+SNR:   이진 AUROC=0.9134, Macro-F1=0.6834, 이소성 AUROC=0.8662")
+    print("    5b 단일:  Macro-F1=0.6762, 이소성 F1=0.3478, 이소성 AUROC=0.8620")
+    print("    5d+SNR:   이진 AUROC=0.9134, Macro-F1=0.6834, 이소성 AUROC=0.8662")
     print()
     print(f"  체크포인트: {best_path}")
     print("=" * 70)

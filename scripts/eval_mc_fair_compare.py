@@ -360,11 +360,11 @@ def main():
         print(f"  이진헤드 AUROC = {r['bin_auroc']:.4f}, Sens@95Sp = {r['bin_sens']:.4f}")
         print(f"  응급 AUROC(AF·허혈 평균) = {r['emerg_auroc']:.4f}")
         print(f"  macro AUROC = {r['macro_auroc']:.4f}, macro F1 = {r['macro_f1']:.4f}")
-        print(f"  per-class AUROC: " +
+        print("  per-class AUROC: " +
               ", ".join(f"{CLASS_NAMES[c]}={r['per_auroc'][c]:.4f}" for c in range(N_CLASSES)))
-        print(f"  per-class F1   : " +
+        print("  per-class F1   : " +
               ", ".join(f"{CLASS_NAMES[c]}={r['per_f1'][c]:.4f}" for c in range(N_CLASSES)))
-        print(f"  임계값: " + ", ".join(f"{t:.2f}" for t in th))
+        print("  임계값: " + ", ".join(f"{t:.2f}" for t in th))
     print("=" * 78)
 
 

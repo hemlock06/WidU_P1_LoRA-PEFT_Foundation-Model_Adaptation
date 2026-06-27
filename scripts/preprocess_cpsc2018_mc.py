@@ -203,7 +203,7 @@ def save_split(out_dir: str, split: str, signals, multihots, singles, record_ids
 
     n = len(lab_arr)
     print(f"  {split:5s}: {n:4d} records")
-    print(f"    [multi-hot 클래스별 양성 수 (중복 허용)]")
+    print("    [multi-hot 클래스별 양성 수 (중복 허용)]")
     for k in range(5):
         n_k = int(mc_arr[:, k].sum())
         print(f"    [{k}] {CLASS_NAMES[k]:30s}: {n_k:4d} ({100*n_k/n:.1f}%)")
