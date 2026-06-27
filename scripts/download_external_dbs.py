@@ -173,7 +173,7 @@ def main():
     args = p.parse_args()
 
     try:
-        import wfdb
+        import wfdb  # noqa: F401  (설치 여부 fail-fast 가드)
     except ImportError:
         sys.exit("[오류] wfdb 미설치 — pip install wfdb")
 

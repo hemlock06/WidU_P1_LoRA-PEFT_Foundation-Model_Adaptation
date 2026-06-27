@@ -34,7 +34,7 @@ import torch.nn as nn
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 try:
-    from sklearn.metrics import roc_auc_score, roc_curve
+    from sklearn.metrics import roc_auc_score
 except ImportError:
     sys.exit("[오류] scikit-learn 미설치")
 
