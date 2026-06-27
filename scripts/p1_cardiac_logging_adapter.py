@@ -14,13 +14,17 @@ P1 cardiac 로깅 어댑터 — 로깅 §2 스키마 레코드 생성
 정직 캐비엇: 모든 cardiac 검증은 단일리드(II) 기준. 2리드(II+V2) 성능은 ≥ 기대되나
             2리드 실데이터로 재검증 필요.
 """
+
 from __future__ import annotations
-import os, sys
+
+import os
+import sys
+
 import numpy as np
 from scipy.signal import find_peaks
 
 sys.path.insert(0, os.path.dirname(__file__))
-from p1_cardiac_channel import P1CardiacChannel, LEAD   # LEAD=1 (slot II)
+from p1_cardiac_channel import LEAD, P1CardiacChannel  # LEAD=1 (slot II)
 
 V2_SLOT = 7
 FS = 500
@@ -57,35 +61,44 @@ class CardiacLoggingAdapter:
         ecg = np.asarray(ecg, dtype=np.float32)
         if ecg.ndim == 2 and ecg.shape[0] == 12:
             lead_ii, lead_v2 = ecg[LEAD], ecg[V2_SLOT]
-        elif ecg.ndim == 2 and ecg.shape[0] == 2:        # [II, V2]
+        elif ecg.ndim == 2 and ecg.shape[0] == 2:  # [II, V2]
             lead_ii, lead_v2 = ecg[0], ecg[1]
         else:
-            raise ValueError(f"ecg shape {ecg.shape} — (2,5000)[II,V2] 또는 (12,5000) 필요")
+            raise ValueError(
+                f"ecg shape {ecg.shape} — (2,5000)[II,V2] 또는 (12,5000) 필요"
+            )
         # 추론 입력: II만 slot1에 (단일리드, 검증). V2 슬롯은 0 유지.
         sig12 = np.zeros((12, lead_ii.shape[-1]), dtype=np.float32)
         sig12[LEAD] = lead_ii
         return sig12, lead_ii, lead_v2
 
-    def to_record(self, ecg: np.ndarray, master_clock_ms: int,
-                  lead_on: bool = True, include_raw: bool = True) -> dict:
+    def to_record(
+        self,
+        ecg: np.ndarray,
+        master_clock_ms: int,
+        lead_on: bool = True,
+        include_raw: bool = True,
+    ) -> dict:
         """단일 10s 윈도우 → §2 레코드 dict (master_clock_ms 키).
         추론=단일리드 II(검증), raw 로깅=II+V2 둘 다(Phase-3 재검증용)."""
         sig12, lead_ii, lead_v2 = self._prep(ecg)
-        out = self.ch.infer(sig12)                       # single-lead II → 스칼라/벡터
+        out = self.ch.infer(sig12)  # single-lead II → 스칼라/벡터
         hr, rhythm = estimate_physio(lead_ii)
         rec = {
-            "master_clock_ms":   int(master_clock_ms),
-            "ecg_lead_on":       bool(lead_on),
+            "master_clock_ms": int(master_clock_ms),
+            "ecg_lead_on": bool(lead_on),
             # ── ecg_outputs (P1 cardiac) ──
-            "emergency_score":   float(out["emergency_score"]),
-            **{f"cardiac_p_{n}": float(out["cardiac_probs"][i])
-               for i, n in enumerate(CARDIAC_PROB_NAMES)},
-            "benign_flag":       bool(out["benign_flag"]),
-            "hr_bpm":            hr,
+            "emergency_score": float(out["emergency_score"]),
+            **{
+                f"cardiac_p_{n}": float(out["cardiac_probs"][i])
+                for i, n in enumerate(CARDIAC_PROB_NAMES)
+            },
+            "benign_flag": bool(out["benign_flag"]),
+            "hr_bpm": hr,
             "rhythm_regularity": rhythm,
-            "model_version":     MODEL_VERSION,
+            "model_version": MODEL_VERSION,
         }
-        if include_raw:                                   # ecg_raw (별도 store 권장)
+        if include_raw:  # ecg_raw (별도 store 권장)
             rec["ecg_lead_II"] = lead_ii.astype(np.float32)
             rec["ecg_lead_V2"] = lead_v2.astype(np.float32)
         return rec
@@ -93,17 +106,23 @@ class CardiacLoggingAdapter:
 
 # ── 자가 데모/검증: CACHET 몇 윈도우 → 레코드 생성 + (가능 시) parquet ──────────
 if __name__ == "__main__":
-    try: sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    except Exception: pass
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     cs = np.load(r"data/processed/cachet/signals.npy")
     ad = CardiacLoggingAdapter()
-    recs = [ad.to_record(cs[i], master_clock_ms=1000 * i, include_raw=False)
-            for i in range(3)]
+    recs = [
+        ad.to_record(cs[i], master_clock_ms=1000 * i, include_raw=False)
+        for i in range(3)
+    ]
     print("P1 cardiac 로깅 레코드 데모 (CACHET 3 윈도우, raw 제외)")
     for r in recs:
-        print(f"  t={r['master_clock_ms']}ms emergency={r['emergency_score']:.3f} "
-              f"hr={r['hr_bpm']:.0f} "
-              f"p_af={r['cardiac_p_af']:.2f} benign={r['benign_flag']}")
+        print(
+            f"  t={r['master_clock_ms']}ms emergency={r['emergency_score']:.3f} "
+            f"hr={r['hr_bpm']:.0f} "
+            f"p_af={r['cardiac_p_af']:.2f} benign={r['benign_flag']}"
+        )
     print("  레코드 키:", list(recs[0].keys()))
     # raw 포함 1개 → 크기 확인
     r_raw = ad.to_record(cs[0], master_clock_ms=0, include_raw=True)
@@ -112,6 +131,7 @@ if __name__ == "__main__":
     # parquet 쓰기 데모 (pandas 가용 시)
     try:
         import pandas as pd
+
         df = pd.DataFrame([{k: v for k, v in r.items()} for r in recs])
         out = r"outputs/_cardiac_log_demo.parquet"
         df.to_parquet(out)

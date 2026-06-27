@@ -5,6 +5,7 @@ F.multi_head_attention_forward path when the LoRA delta is zero.
 If this passes, enabling LoRA does not perturb the pretrained model at step 0
 (standard LoRA init: B=0 -> zero delta), so baseline behavior is preserved.
 """
+
 import torch
 from fairseq_signals.modules.multi_head_attention import MultiHeadAttention
 

@@ -37,15 +37,15 @@ Warm start (기본):
 import argparse
 import math
 import os
+import os as _os
 import sys
+import sys as _sys
 
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 
-import sys as _sys
-import os as _os
 _sys.path.insert(0, _os.path.dirname(__file__))
 from multisnr import MultiSNRNoise
 
@@ -56,7 +56,11 @@ except Exception:
 
 try:
     from sklearn.metrics import (
-        roc_auc_score, f1_score, roc_curve, confusion_matrix, classification_report
+        classification_report,
+        confusion_matrix,
+        f1_score,
+        roc_auc_score,
+        roc_curve,
     )
 except ImportError:
     sys.exit("[오류] scikit-learn 미설치")
@@ -72,10 +76,10 @@ CLASS_NAMES = [
 ]
 EMERGENCY_CLASSES = (1, 2)  # AF + 급성허혈
 
-CKPT_FM   = "checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
-DATA_DIR  = "data/processed/cpsc2018_mc"
+CKPT_FM = "checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+DATA_DIR = "data/processed/cpsc2018_mc"
 NSTDB_DIR = "data/raw/nstdb"
-OUT_DIR   = "outputs/lora_multitask_snr"
+OUT_DIR = "outputs/lora_multitask_snr"
 WARM_CKPT = "outputs/lora_multitask/lora_multitask_best.pt"
 
 
@@ -96,23 +100,36 @@ class LoRALinear(nn.Module):
         nn.init.zeros_(self.lora_B.weight)
 
     @property
-    def bias(self):   return self.original.bias
+    def bias(self):
+        return self.original.bias
+
     @property
-    def weight(self): return self.original.weight
+    def weight(self):
+        return self.original.weight
 
     def forward(self, x):
-        return self.original(x) + self.lora_B(self.lora_A(self.dropout(x))) * self.scaling
+        return (
+            self.original(x) + self.lora_B(self.lora_A(self.dropout(x))) * self.scaling
+        )
 
 
-def inject_lora(model, rank, alpha, dropout,
-                target_suffixes=("self_attn.q_proj", "self_attn.v_proj")):
+def inject_lora(
+    model,
+    rank,
+    alpha,
+    dropout,
+    target_suffixes=("self_attn.q_proj", "self_attn.v_proj"),
+):
     replaced = []
     for name, module in list(model.named_modules()):
-        if not isinstance(module, nn.Linear):           continue
-        if not any(name.endswith(s) for s in target_suffixes): continue
+        if not isinstance(module, nn.Linear):
+            continue
+        if not any(name.endswith(s) for s in target_suffixes):
+            continue
         parts = name.split(".")
         parent = model
-        for p in parts[:-1]: parent = getattr(parent, p)
+        for p in parts[:-1]:
+            parent = getattr(parent, p)
         setattr(parent, parts[-1], LoRALinear(module, rank, alpha, dropout))
         replaced.append(name)
     return replaced
@@ -123,17 +140,19 @@ class CPSCMultiTaskDataset(Dataset):
     def __init__(self, split_dir: str, mmap: bool = True):
         # mmap=True: signals를 RAM에 적재하지 않고 디스크에서 샘플 단위 읽기 (OS page-cache로
         # 속도 유지, 메모리 압박 시 회수 → 16GB RAM OOM 방지). 학습 수식 불변.
-        self.signals    = np.load(os.path.join(split_dir, "signals.npy"),
-                                  mmap_mode="r" if mmap else None)
-        self.labels_mc  = np.load(os.path.join(split_dir, "labels.npy"))
+        self.signals = np.load(
+            os.path.join(split_dir, "signals.npy"), mmap_mode="r" if mmap else None
+        )
+        self.labels_mc = np.load(os.path.join(split_dir, "labels.npy"))
         self.labels_bin = np.load(os.path.join(split_dir, "labels_bin.npy"))
 
-    def __len__(self): return len(self.labels_mc)
+    def __len__(self):
+        return len(self.labels_mc)
 
     def __getitem__(self, idx):
-        x  = torch.tensor(np.ascontiguousarray(self.signals[idx]), dtype=torch.float32)
+        x = torch.tensor(np.ascontiguousarray(self.signals[idx]), dtype=torch.float32)
         yb = torch.tensor(float(self.labels_bin[idx]), dtype=torch.float32)
-        ym = torch.tensor(int(self.labels_mc[idx]),    dtype=torch.long)
+        ym = torch.tensor(int(self.labels_mc[idx]), dtype=torch.long)
         return x, yb, ym
 
 
@@ -146,11 +165,14 @@ def random_lead_mask(x, p=0.5):
 # ── ECG-FM 로드 ──────────────────────────────────────────────────────────
 def load_ecgfm(ckpt_path, device):
     from fairseq_signals.utils.checkpoint_utils import load_model_and_task
+
     result = load_model_and_task(ckpt_path)
     if isinstance(result, tuple):
         for r in result:
-            if hasattr(r, "parameters"): return r.to(device)
-            if isinstance(r, list) and r and hasattr(r[0], "parameters"): return r[0].to(device)
+            if hasattr(r, "parameters"):
+                return r.to(device)
+            if isinstance(r, list) and r and hasattr(r[0], "parameters"):
+                return r[0].to(device)
     return result.to(device)
 
 
@@ -164,46 +186,54 @@ class BinaryHead(nn.Module):
     def __init__(self, in_dim=EMBED_DIM):
         super().__init__()
         self.fc = nn.Linear(in_dim, 1)
-    def forward(self, x): return self.fc(x).squeeze(-1)
+
+    def forward(self, x):
+        return self.fc(x).squeeze(-1)
 
 
 class MulticlassHead(nn.Module):
     def __init__(self, in_dim=EMBED_DIM, n_classes=N_CLASSES):
         super().__init__()
         self.fc = nn.Linear(in_dim, n_classes)
-    def forward(self, x): return self.fc(x)
+
+    def forward(self, x):
+        return self.fc(x)
 
 
 # ── 평가 ─────────────────────────────────────────────────────────────────
 @torch.no_grad()
 def evaluate(backbone, head_bin, head_mc, loader, device):
-    backbone.eval(); head_bin.eval(); head_mc.eval()
+    backbone.eval()
+    head_bin.eval()
+    head_mc.eval()
     all_bin_logits, all_mc_logits = [], []
     all_yb, all_ym = [], []
 
     for x, yb, ym in loader:
         x = x.to(device)
-        emb        = extract_embedding(backbone, x)
+        emb = extract_embedding(backbone, x)
         bin_logits = head_bin(emb).cpu()
-        mc_logits  = head_mc(emb).cpu()
-        all_bin_logits.append(bin_logits); all_mc_logits.append(mc_logits)
-        all_yb.append(yb); all_ym.append(ym)
+        mc_logits = head_mc(emb).cpu()
+        all_bin_logits.append(bin_logits)
+        all_mc_logits.append(mc_logits)
+        all_yb.append(yb)
+        all_ym.append(ym)
 
     if device.type == "cuda":
-        torch.cuda.empty_cache()   # 장기 실행 단편화 누적 방지
+        torch.cuda.empty_cache()  # 장기 실행 단편화 누적 방지
     bin_logits = torch.cat(all_bin_logits).numpy()
-    mc_logits  = torch.cat(all_mc_logits).numpy()
-    yb         = torch.cat(all_yb).numpy().astype(int)
-    ym         = torch.cat(all_ym).numpy().astype(int)
+    mc_logits = torch.cat(all_mc_logits).numpy()
+    yb = torch.cat(all_yb).numpy().astype(int)
+    ym = torch.cat(all_ym).numpy().astype(int)
 
     # 이진 평가
     bin_probs = 1 / (1 + np.exp(-bin_logits))
     if len(np.unique(yb)) >= 2:
         bin_auroc = roc_auc_score(yb, bin_probs)
-        bin_f1    = f1_score(yb, (bin_probs >= 0.5).astype(int), zero_division=0)
+        bin_f1 = f1_score(yb, (bin_probs >= 0.5).astype(int), zero_division=0)
         fpr, tpr, _ = roc_curve(yb, bin_probs)
         spec = 1 - fpr
-        idx  = np.searchsorted(spec[::-1], 0.95)
+        idx = np.searchsorted(spec[::-1], 0.95)
         bin_sens = float(tpr[::-1][idx]) if idx < len(tpr) else float("nan")
     else:
         bin_auroc = bin_f1 = bin_sens = float("nan")
@@ -211,7 +241,7 @@ def evaluate(backbone, head_bin, head_mc, loader, device):
     # 다중 평가
     mc_probs = torch.softmax(torch.tensor(mc_logits), dim=-1).numpy()
     mc_preds = mc_probs.argmax(axis=-1)
-    macro_f1    = f1_score(ym, mc_preds, average="macro", zero_division=0)
+    macro_f1 = f1_score(ym, mc_preds, average="macro", zero_division=0)
     weighted_f1 = f1_score(ym, mc_preds, average="weighted", zero_division=0)
     per_auroc = []
     for c in range(N_CLASSES):
@@ -222,17 +252,17 @@ def evaluate(backbone, head_bin, head_mc, loader, device):
             per_auroc.append(float("nan"))
 
     return {
-        "bin_auroc":   bin_auroc,
-        "bin_f1":      bin_f1,
-        "bin_sens":    bin_sens,
-        "macro_f1":    macro_f1,
+        "bin_auroc": bin_auroc,
+        "bin_f1": bin_f1,
+        "bin_sens": bin_sens,
+        "macro_f1": macro_f1,
         "weighted_f1": weighted_f1,
-        "per_auroc":   per_auroc,
-        "mc_preds":    mc_preds,
-        "mc_labels":   ym,
-        "mc_probs":    mc_probs,
-        "bin_probs":   bin_probs,
-        "bin_labels":  yb,
+        "per_auroc": per_auroc,
+        "mc_preds": mc_preds,
+        "mc_labels": ym,
+        "mc_probs": mc_probs,
+        "bin_probs": bin_probs,
+        "bin_labels": yb,
     }
 
 
@@ -246,30 +276,50 @@ def train(args):
     print(f"데이터:     {args.data_dir}")
     print(f"NSTDB:      {args.nstdb_dir}")
     print(f"warm start: {args.warm_ckpt if args.warm_ckpt else '없음 (cold start)'}")
-    print(f"alpha (BCE 비중): {args.alpha}  →  loss = {args.alpha}·BCE + {1-args.alpha:.2f}·CE")
+    print(
+        f"alpha (BCE 비중): {args.alpha}  →  loss = {args.alpha}·BCE + {1 - args.alpha:.2f}·CE"
+    )
     print(f"LR={args.lr}, epochs={args.epochs}, batch={args.batch_size}")
     print(f"LoRA rank={args.lora_rank}, alpha={args.lora_alpha}, RLM p={args.rlm_p}")
     snr_set = tuple(int(s) for s in args.snr_set.split(","))
-    print(f"multi-SNR:  {snr_set}dB, p_noise={args.p_noise} ({int((1-args.p_noise)*100)}% clean 유지)")
+    print(
+        f"multi-SNR:  {snr_set}dB, p_noise={args.p_noise} ({int((1 - args.p_noise) * 100)}% clean 유지)"
+    )
     print()
 
     os.makedirs(args.out_dir, exist_ok=True)
 
     # ── 데이터 ────────────────────────────────────────────────────────────
     train_ds = CPSCMultiTaskDataset(os.path.join(args.data_dir, "train"))
-    val_ds   = CPSCMultiTaskDataset(os.path.join(args.data_dir, "val"))
-    test_ds  = CPSCMultiTaskDataset(os.path.join(args.data_dir, "test"))
+    val_ds = CPSCMultiTaskDataset(os.path.join(args.data_dir, "val"))
+    test_ds = CPSCMultiTaskDataset(os.path.join(args.data_dir, "test"))
 
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size,
-                              shuffle=True, num_workers=0, pin_memory=False)
-    val_loader   = DataLoader(val_ds,   batch_size=args.batch_size,
-                              shuffle=False, num_workers=0, pin_memory=False)
-    test_loader  = DataLoader(test_ds,  batch_size=args.batch_size,
-                              shuffle=False, num_workers=0, pin_memory=False)
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=0,
+        pin_memory=False,
+    )
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=False,
+    )
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=False,
+    )
 
     # 클래스 가중치 (multi, 역빈도)
-    counts = np.array([(train_ds.labels_mc == c).sum() for c in range(N_CLASSES)],
-                      dtype=np.float64)
+    counts = np.array(
+        [(train_ds.labels_mc == c).sum() for c in range(N_CLASSES)], dtype=np.float64
+    )
     mc_w = len(train_ds.labels_mc) / (N_CLASSES * counts)
     class_weights = torch.tensor(mc_w, dtype=torch.float32).to(device)
 
@@ -279,7 +329,9 @@ def train(args):
     pos_weight = torch.tensor(n_neg / max(n_pos, 1), dtype=torch.float32).to(device)
 
     print(f"[데이터] train={len(train_ds)}, val={len(val_ds)}, test={len(test_ds)}")
-    print(f"         이진 응급={int(n_pos)}, 정상={int(n_neg)}, pos_weight={pos_weight.item():.3f}")
+    print(
+        f"         이진 응급={int(n_pos)}, 정상={int(n_neg)}, pos_weight={pos_weight.item():.3f}"
+    )
     print("[다중분류 가중치]")
     for c in range(N_CLASSES):
         print(f"  [{c}] {CLASS_NAMES[c]:30s} n={int(counts[c]):4d}  w={mc_w[c]:.4f}")
@@ -289,14 +341,18 @@ def train(args):
     print("[모델] ECG-FM 백본 로드 중...")
     backbone = load_ecgfm(args.ckpt_path, device)
     backbone.train()
-    for p in backbone.parameters(): p.requires_grad_(False)
-    replaced = inject_lora(backbone, rank=args.lora_rank, alpha=args.lora_alpha,
-                           dropout=args.lora_dropout)
-    print(f"       LoRA 주입: {len(replaced)} 레이어, "
-          f"학습 파라미터 {sum(p.numel() for p in backbone.parameters() if p.requires_grad):,}")
+    for p in backbone.parameters():
+        p.requires_grad_(False)
+    replaced = inject_lora(
+        backbone, rank=args.lora_rank, alpha=args.lora_alpha, dropout=args.lora_dropout
+    )
+    print(
+        f"       LoRA 주입: {len(replaced)} 레이어, "
+        f"학습 파라미터 {sum(p.numel() for p in backbone.parameters() if p.requires_grad):,}"
+    )
 
     head_bin = BinaryHead().to(device)
-    head_mc  = MulticlassHead().to(device)
+    head_mc = MulticlassHead().to(device)
     print("       BinaryHead(768→1) + MulticlassHead(768→5) 추가")
 
     # warm start
@@ -314,40 +370,55 @@ def train(args):
         print(f"[Warm start] {args.warm_ckpt}")
         if isinstance(val_ref, float):
             print(f"             원본 val composite/AUROC={val_ref:.4f}")
-        print("             → 백본 LoRA + 이진/다중 head 재사용 (multi-SNR 추가 계속학습)")
+        print(
+            "             → 백본 LoRA + 이진/다중 head 재사용 (multi-SNR 추가 계속학습)"
+        )
     else:
         print("[Cold start] 모든 LoRA + head 랜덤 초기화")
     print()
 
     # ── 옵티마이저 ────────────────────────────────────────────────────────
-    params = ([p for p in backbone.parameters() if p.requires_grad]
-              + list(head_bin.parameters()) + list(head_mc.parameters()))
+    params = (
+        [p for p in backbone.parameters() if p.requires_grad]
+        + list(head_bin.parameters())
+        + list(head_mc.parameters())
+    )
     optimizer = torch.optim.AdamW(params, lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=args.epochs, eta_min=args.lr * 0.1)
+        optimizer, T_max=args.epochs, eta_min=args.lr * 0.1
+    )
     bce_loss = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-    ce_loss  = nn.CrossEntropyLoss(weight=class_weights)
+    ce_loss = nn.CrossEntropyLoss(weight=class_weights)
 
     # ── multi-SNR 증강기 ─────────────────────────────────────────────────
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     print("[증강] NSTDB 노이즈 로드 + 500Hz 리샘플 중...")
-    multisnr = MultiSNRNoise(nstdb_dir=args.nstdb_dir, snr_set=snr_set,
-                             device=device, seed=args.seed,
-                             noise_mode=args.noise_mode)
-    print("       pool 길이: "
-          + ", ".join(f"{t}={multisnr.noise_pool[t].shape[0]:,}"
-                      for t in ("bw", "em", "ma")))
-    print(f"       노이즈 모드: {args.noise_mode} "
-          f"({'리드당 1종' if args.noise_mode=='single' else 'bw·em·ma 가중합성(동시 중첩)'})")
+    multisnr = MultiSNRNoise(
+        nstdb_dir=args.nstdb_dir,
+        snr_set=snr_set,
+        device=device,
+        seed=args.seed,
+        noise_mode=args.noise_mode,
+    )
+    print(
+        "       pool 길이: "
+        + ", ".join(
+            f"{t}={multisnr.noise_pool[t].shape[0]:,}" for t in ("bw", "em", "ma")
+        )
+    )
+    print(
+        f"       노이즈 모드: {args.noise_mode} "
+        f"({'리드당 1종' if args.noise_mode == 'single' else 'bw·em·ma 가중합성(동시 중첩)'})"
+    )
     print()
 
     best_composite = 0.0
-    best_epoch     = 0
-    best_path      = os.path.join(args.out_dir, "lora_multitask_snr_best.pt")
-    resume_path    = os.path.join(args.out_dir, "resume.pt")
-    done_path      = os.path.join(args.out_dir, "DONE.txt")
-    start_epoch    = 1
+    best_epoch = 0
+    best_path = os.path.join(args.out_dir, "lora_multitask_snr_best.pt")
+    resume_path = os.path.join(args.out_dir, "resume.pt")
+    done_path = os.path.join(args.out_dir, "DONE.txt")
+    start_epoch = 1
 
     # ── 자동 재개(self-healing): OOM 등으로 중단돼도 마지막 저장 epoch부터 이어감 ──
     if args.resume and os.path.exists(resume_path):
@@ -357,9 +428,9 @@ def train(args):
         head_mc.load_state_dict(rs["head_mc_state"])
         optimizer.load_state_dict(rs["opt_state"])
         scheduler.load_state_dict(rs["sched_state"])
-        start_epoch    = rs["epoch"] + 1
+        start_epoch = rs["epoch"] + 1
         best_composite = rs["best_composite"]
-        best_epoch     = rs["best_epoch"]
+        best_epoch = rs["best_epoch"]
         # rng 상태 복원 → 무중단과 동일한 노이즈/셔플 realization (결정적 resume)
         if "np_state" in rs:
             np.random.set_state(rs["np_state"])
@@ -367,18 +438,24 @@ def train(args):
             if rs.get("cuda_state") is not None and torch.cuda.is_available():
                 torch.cuda.set_rng_state_all(rs["cuda_state"])
             multisnr.rng.bit_generator.state = rs["multisnr_state"]
-        print(f"[RESUME] epoch {start_epoch}부터 재개 (best={best_composite:.4f}@ep{best_epoch}, rng복원)")
+        print(
+            f"[RESUME] epoch {start_epoch}부터 재개 (best={best_composite:.4f}@ep{best_epoch}, rng복원)"
+        )
 
-    print(f"{'Ep':>3} {'Loss':>8} {'BCE':>6} {'CE':>6}  "
-          f"{'BinAUROC':>9} {'MacroF1':>8} {'Compose':>8}")
+    print(
+        f"{'Ep':>3} {'Loss':>8} {'BCE':>6} {'CE':>6}  "
+        f"{'BinAUROC':>9} {'MacroF1':>8} {'Compose':>8}"
+    )
     print("-" * 60)
 
     for epoch in range(start_epoch, args.epochs + 1):
-        backbone.train(); head_bin.train(); head_mc.train()
+        backbone.train()
+        head_bin.train()
+        head_mc.train()
         tot, tot_b, tot_c, n = 0.0, 0.0, 0.0, 0
 
         for bi, (x, yb, ym) in enumerate(train_loader):
-            x  = x.to(device)
+            x = x.to(device)
             yb = yb.to(device)
             ym = ym.to(device)
 
@@ -388,9 +465,9 @@ def train(args):
             if args.rlm_p > 0:
                 x = random_lead_mask(x, p=args.rlm_p)
 
-            emb        = extract_embedding(backbone, x)
+            emb = extract_embedding(backbone, x)
             bin_logits = head_bin(emb)
-            mc_logits  = head_mc(emb)
+            mc_logits = head_mc(emb)
             lb = bce_loss(bin_logits, yb)
             lc = ce_loss(mc_logits, ym)
             loss = args.alpha * lb + (1 - args.alpha) * lc
@@ -401,12 +478,12 @@ def train(args):
             optimizer.step()
 
             bs = x.size(0)
-            tot   += loss.item() * bs
+            tot += loss.item() * bs
             tot_b += lb.item() * bs
             tot_c += lc.item() * bs
-            n     += bs
+            n += bs
             if device.type == "cuda" and bi % 100 == 99:
-                torch.cuda.empty_cache()   # 단편화 누적 방지 (epoch 내 주기적)
+                torch.cuda.empty_cache()  # 단편화 누적 방지 (epoch 내 주기적)
 
         scheduler.step()
         if device.type == "cuda":
@@ -415,49 +492,66 @@ def train(args):
         composite = (val["bin_auroc"] + val["macro_f1"]) / 2
 
         marker = " ←" if composite > best_composite else ""
-        print(f"{epoch:3d} {tot/n:8.4f} {tot_b/n:6.4f} {tot_c/n:6.4f}  "
-              f"{val['bin_auroc']:9.4f} {val['macro_f1']:8.4f} {composite:8.4f}{marker}",
-              flush=True)
+        print(
+            f"{epoch:3d} {tot / n:8.4f} {tot_b / n:6.4f} {tot_c / n:6.4f}  "
+            f"{val['bin_auroc']:9.4f} {val['macro_f1']:8.4f} {composite:8.4f}{marker}",
+            flush=True,
+        )
 
         if composite > best_composite:
             best_composite = composite
-            best_epoch     = epoch
-            torch.save({
-                "epoch":              epoch,
-                "backbone_lora":      backbone.state_dict(),
-                "head_bin_state":     head_bin.state_dict(),
-                "head_mc_state":      head_mc.state_dict(),
-                "val_bin_auroc":      val["bin_auroc"],
-                "val_macro_f1":       val["macro_f1"],
-                "val_composite":      composite,
-                "alpha":              args.alpha,
-                "noise_mode":         args.noise_mode,
-                "lora_rank":          args.lora_rank,
-                "lora_alpha":         args.lora_alpha,
-                "n_classes":          N_CLASSES,
-                "class_names":        CLASS_NAMES,
-                "emergency_classes":  EMERGENCY_CLASSES,
-            }, best_path)
+            best_epoch = epoch
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "backbone_lora": backbone.state_dict(),
+                    "head_bin_state": head_bin.state_dict(),
+                    "head_mc_state": head_mc.state_dict(),
+                    "val_bin_auroc": val["bin_auroc"],
+                    "val_macro_f1": val["macro_f1"],
+                    "val_composite": composite,
+                    "alpha": args.alpha,
+                    "noise_mode": args.noise_mode,
+                    "lora_rank": args.lora_rank,
+                    "lora_alpha": args.lora_alpha,
+                    "n_classes": N_CLASSES,
+                    "class_names": CLASS_NAMES,
+                    "emergency_classes": EMERGENCY_CLASSES,
+                },
+                best_path,
+            )
 
         # 매 epoch resume 상태 저장 (LoRA delta+heads+opt+sched만 — 수 MB, 자동 재개용)
-        torch.save({
-            "epoch": epoch,
-            "lora_state": {k: v for k, v in backbone.state_dict().items() if "lora_" in k},
-            "head_bin_state": head_bin.state_dict(),
-            "head_mc_state": head_mc.state_dict(),
-            "opt_state": optimizer.state_dict(),
-            "sched_state": scheduler.state_dict(),
-            "best_composite": best_composite, "best_epoch": best_epoch,
-            # rng 상태까지 저장 → resume이 나도 무중단과 동일(결정적). 섭동 방지.
-            "np_state": np.random.get_state(),
-            "torch_state": torch.get_rng_state(),
-            "cuda_state": (torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None),
-            "multisnr_state": multisnr.rng.bit_generator.state,
-        }, resume_path)
+        torch.save(
+            {
+                "epoch": epoch,
+                "lora_state": {
+                    k: v for k, v in backbone.state_dict().items() if "lora_" in k
+                },
+                "head_bin_state": head_bin.state_dict(),
+                "head_mc_state": head_mc.state_dict(),
+                "opt_state": optimizer.state_dict(),
+                "sched_state": scheduler.state_dict(),
+                "best_composite": best_composite,
+                "best_epoch": best_epoch,
+                # rng 상태까지 저장 → resume이 나도 무중단과 동일(결정적). 섭동 방지.
+                "np_state": np.random.get_state(),
+                "torch_state": torch.get_rng_state(),
+                "cuda_state": (
+                    torch.cuda.get_rng_state_all()
+                    if torch.cuda.is_available()
+                    else None
+                ),
+                "multisnr_state": multisnr.rng.bit_generator.state,
+            },
+            resume_path,
+        )
 
     # ── 학습 완료 마커 (test eval보다 먼저 — eval이 OOM나도 완료는 기록) ──
     with open(done_path, "w", encoding="utf-8") as _f:
-        _f.write(f"trained {args.epochs} epochs, best composite={best_composite:.4f} @ep{best_epoch}\n")
+        _f.write(
+            f"trained {args.epochs} epochs, best composite={best_composite:.4f} @ep{best_epoch}\n"
+        )
     print(f"[DONE] {done_path} — 학습 완료(전 epoch)")
 
     # ── 테스트 ────────────────────────────────────────────────────────────
@@ -489,62 +583,103 @@ def train(args):
         print(f"    [{c}] {CLASS_NAMES[c]:30s}: {res['per_auroc'][c]:.4f}")
     print()
     print("  Confusion Matrix (rows=true, cols=pred):")
-    cm = confusion_matrix(res["mc_labels"], res["mc_preds"], labels=list(range(N_CLASSES)))
+    cm = confusion_matrix(
+        res["mc_labels"], res["mc_preds"], labels=list(range(N_CLASSES))
+    )
     print(f"    {'pred→':<3s} " + " ".join(f"{c:>5d}" for c in range(N_CLASSES)))
     for r in range(N_CLASSES):
         print(f"    [{r}]   " + " ".join(f"{cm[r, c]:>5d}" for c in range(N_CLASSES)))
     print()
     print("  Classification Report:")
-    print(classification_report(res["mc_labels"], res["mc_preds"],
-                                target_names=CLASS_NAMES, zero_division=0, digits=4))
+    print(
+        classification_report(
+            res["mc_labels"],
+            res["mc_preds"],
+            target_names=CLASS_NAMES,
+            zero_division=0,
+            digits=4,
+        )
+    )
     print()
     print("  [비교 기준]")
-    print("    5d (멀티헤드, no-SNR):         AUROC=0.9140, Macro-F1=0.6840 (cpsc_mc task)")
+    print(
+        "    5d (멀티헤드, no-SNR):         AUROC=0.9140, Macro-F1=0.6840 (cpsc_mc task)"
+    )
     print("    5b 다중 단일 (lora_mc):        Macro-F1=0.6762, 이진파생=0.9263")
-    print(f"  [5d+SNR 멀티헤드]            AUROC={res['bin_auroc']:.4f}, "
-          f"Macro-F1={res['macro_f1']:.4f}")
+    print(
+        f"  [5d+SNR 멀티헤드]            AUROC={res['bin_auroc']:.4f}, "
+        f"Macro-F1={res['macro_f1']:.4f}"
+    )
     print()
     print(f"  체크포인트: {best_path}")
     print("=" * 70)
 
     # npz 저장
-    np.savez(os.path.join(args.out_dir, "test_results.npz"),
-             bin_labels=res["bin_labels"], bin_probs=res["bin_probs"],
-             mc_labels=res["mc_labels"], mc_preds=res["mc_preds"], mc_probs=res["mc_probs"],
-             bin_auroc=res["bin_auroc"], bin_f1=res["bin_f1"], bin_sens=res["bin_sens"],
-             macro_f1=res["macro_f1"], weighted_f1=res["weighted_f1"],
-             per_auroc=np.array(res["per_auroc"]))
+    np.savez(
+        os.path.join(args.out_dir, "test_results.npz"),
+        bin_labels=res["bin_labels"],
+        bin_probs=res["bin_probs"],
+        mc_labels=res["mc_labels"],
+        mc_preds=res["mc_preds"],
+        mc_probs=res["mc_probs"],
+        bin_auroc=res["bin_auroc"],
+        bin_f1=res["bin_f1"],
+        bin_sens=res["bin_sens"],
+        macro_f1=res["macro_f1"],
+        weighted_f1=res["weighted_f1"],
+        per_auroc=np.array(res["per_auroc"]),
+    )
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--data_dir",   default=DATA_DIR)
-    parser.add_argument("--ckpt_path",  default=CKPT_FM)
-    parser.add_argument("--out_dir",    default=OUT_DIR)
-    parser.add_argument("--warm_ckpt",  default=WARM_CKPT,
-                        help="warm start 체크포인트 (빈 문자열이면 cold start)")
-    parser.add_argument("--alpha",      type=float, default=0.5,
-                        help="BCE 비중 (0=다중분류만, 1=이진만, 0.5=균등)")
-    parser.add_argument("--batch_size", type=int,   default=16)
-    parser.add_argument("--epochs",     type=int,   default=30)
-    parser.add_argument("--lr",         type=float, default=1e-4)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--data_dir", default=DATA_DIR)
+    parser.add_argument("--ckpt_path", default=CKPT_FM)
+    parser.add_argument("--out_dir", default=OUT_DIR)
+    parser.add_argument(
+        "--warm_ckpt",
+        default=WARM_CKPT,
+        help="warm start 체크포인트 (빈 문자열이면 cold start)",
+    )
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=0.5,
+        help="BCE 비중 (0=다중분류만, 1=이진만, 0.5=균등)",
+    )
+    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--weight_decay", type=float, default=1e-2)
-    parser.add_argument("--lora_rank",  type=int,   default=8)
+    parser.add_argument("--lora_rank", type=int, default=8)
     parser.add_argument("--lora_alpha", type=float, default=16.0)
     parser.add_argument("--lora_dropout", type=float, default=0.1)
-    parser.add_argument("--rlm_p",      type=float, default=0.5)
-    parser.add_argument("--nstdb_dir",  default=NSTDB_DIR)
-    parser.add_argument("--p_noise",    type=float, default=0.75,
-                        help="샘플당 노이즈 주입 확률 (1-p_noise는 clean 유지)")
-    parser.add_argument("--snr_set",    type=str,   default="24,18,12,6,0",
-                        help="쉼표 구분 SNR 집합 (dB)")
-    parser.add_argument("--noise_mode", type=str,   default="single",
-                        choices=["single", "mixed", "mixed_temporal"],
-                        help="single=리드당 1종 / mixed=3종 가중합성 / mixed_temporal=+시간 엔벨로프")
-    parser.add_argument("--resume",     action="store_true",
-                        help="out_dir/resume.pt 있으면 마지막 epoch부터 자동 재개 (self-healing)")
-    parser.add_argument("--seed",       type=int,   default=42)
+    parser.add_argument("--rlm_p", type=float, default=0.5)
+    parser.add_argument("--nstdb_dir", default=NSTDB_DIR)
+    parser.add_argument(
+        "--p_noise",
+        type=float,
+        default=0.75,
+        help="샘플당 노이즈 주입 확률 (1-p_noise는 clean 유지)",
+    )
+    parser.add_argument(
+        "--snr_set", type=str, default="24,18,12,6,0", help="쉼표 구분 SNR 집합 (dB)"
+    )
+    parser.add_argument(
+        "--noise_mode",
+        type=str,
+        default="single",
+        choices=["single", "mixed", "mixed_temporal"],
+        help="single=리드당 1종 / mixed=3종 가중합성 / mixed_temporal=+시간 엔벨로프",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="out_dir/resume.pt 있으면 마지막 epoch부터 자동 재개 (self-healing)",
+    )
+    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
     train(args)
 

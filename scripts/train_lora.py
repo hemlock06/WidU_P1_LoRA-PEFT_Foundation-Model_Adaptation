@@ -32,7 +32,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 
 try:
-    from sklearn.metrics import roc_auc_score, f1_score, roc_curve
+    from sklearn.metrics import f1_score, roc_auc_score, roc_curve
 except ImportError:
     sys.exit("[오류] scikit-learn 미설치 — pip install scikit-learn")
 
@@ -40,6 +40,7 @@ EMBED_DIM = 768
 
 
 # ── LoRA 모듈 ─────────────────────────────────────────────────────────
+
 
 class LoRALinear(nn.Module):
     """
@@ -55,13 +56,13 @@ class LoRALinear(nn.Module):
         if self.original.bias is not None:
             self.original.bias.requires_grad_(False)
 
-        in_dim  = linear.in_features
+        in_dim = linear.in_features
         out_dim = linear.out_features
 
-        self.lora_A   = nn.Linear(in_dim, rank, bias=False)
-        self.lora_B   = nn.Linear(rank, out_dim, bias=False)
-        self.scaling  = alpha / rank
-        self.dropout  = nn.Dropout(dropout)
+        self.lora_A = nn.Linear(in_dim, rank, bias=False)
+        self.lora_B = nn.Linear(rank, out_dim, bias=False)
+        self.scaling = alpha / rank
+        self.dropout = nn.Dropout(dropout)
 
         nn.init.kaiming_uniform_(self.lora_A.weight, a=math.sqrt(5))
         nn.init.zeros_(self.lora_B.weight)
@@ -75,11 +76,18 @@ class LoRALinear(nn.Module):
         return self.original.weight
 
     def forward(self, x):
-        return self.original(x) + self.lora_B(self.lora_A(self.dropout(x))) * self.scaling
+        return (
+            self.original(x) + self.lora_B(self.lora_A(self.dropout(x))) * self.scaling
+        )
 
 
-def inject_lora(model: nn.Module, rank: int, alpha: float, dropout: float,
-                target_suffixes: tuple = ("self_attn.q_proj", "self_attn.v_proj")):
+def inject_lora(
+    model: nn.Module,
+    rank: int,
+    alpha: float,
+    dropout: float,
+    target_suffixes: tuple = ("self_attn.q_proj", "self_attn.v_proj"),
+):
     """
     model 내의 target_suffixes에 해당하는 Linear 레이어를 LoRALinear로 교체.
     교체된 레이어 이름 목록 반환.
@@ -106,17 +114,18 @@ def inject_lora(model: nn.Module, rank: int, alpha: float, dropout: float,
 
 
 def count_trainable(model: nn.Module):
-    total   = sum(p.numel() for p in model.parameters())
+    total = sum(p.numel() for p in model.parameters())
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     return total, trainable
 
 
 # ── 데이터셋 ─────────────────────────────────────────────────────────
 
+
 class CPSCDataset(Dataset):
     def __init__(self, split_dir: str):
         self.signals = np.load(os.path.join(split_dir, "signals.npy"))
-        self.labels  = np.load(os.path.join(split_dir, "labels.npy"))
+        self.labels = np.load(os.path.join(split_dir, "labels.npy"))
 
     def __len__(self):
         return len(self.labels)
@@ -128,6 +137,7 @@ class CPSCDataset(Dataset):
 
 
 # ── 증강 ─────────────────────────────────────────────────────────────
+
 
 def random_lead_mask(x: torch.Tensor, p: float = 0.5) -> torch.Tensor:
     """
@@ -142,8 +152,10 @@ def random_lead_mask(x: torch.Tensor, p: float = 0.5) -> torch.Tensor:
 
 # ── ECG-FM 로드 ───────────────────────────────────────────────────────
 
+
 def load_ecgfm(ckpt_path: str, device: torch.device):
     from fairseq_signals.utils.checkpoint_utils import load_model_and_task
+
     result = load_model_and_task(ckpt_path)
     if isinstance(result, tuple):
         for r in result:
@@ -162,6 +174,7 @@ def extract_embedding(backbone: nn.Module, x: torch.Tensor) -> torch.Tensor:
 
 # ── 분류 헤드 ─────────────────────────────────────────────────────────
 
+
 class LinearHead(nn.Module):
     def __init__(self, in_dim: int = EMBED_DIM):
         super().__init__()
@@ -173,6 +186,7 @@ class LinearHead(nn.Module):
 
 # ── 평가 ─────────────────────────────────────────────────────────────
 
+
 @torch.no_grad()
 def evaluate(backbone, head, loader, device):
     backbone.eval()
@@ -181,27 +195,28 @@ def evaluate(backbone, head, loader, device):
 
     for x, y in loader:
         x = x.to(device)
-        emb    = extract_embedding(backbone, x)
+        emb = extract_embedding(backbone, x)
         logits = head(emb).cpu()
         all_logits.append(logits)
         all_labels.append(y)
 
     logits = torch.cat(all_logits).numpy()
     labels = torch.cat(all_labels).numpy().astype(int)
-    probs  = 1 / (1 + np.exp(-logits))
+    probs = 1 / (1 + np.exp(-logits))
 
     auroc = roc_auc_score(labels, probs)
-    f1    = f1_score(labels, (probs >= 0.5).astype(int), zero_division=0)
+    f1 = f1_score(labels, (probs >= 0.5).astype(int), zero_division=0)
 
     fpr, tpr, _ = roc_curve(labels, probs)
     spec = 1 - fpr
-    idx  = np.searchsorted(spec[::-1], 0.95)
+    idx = np.searchsorted(spec[::-1], 0.95)
     sens_at_95spec = float(tpr[::-1][idx]) if idx < len(tpr) else float("nan")
 
     return auroc, f1, sens_at_95spec
 
 
 # ── 학습 루프 ─────────────────────────────────────────────────────────
+
 
 def train(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -212,8 +227,10 @@ def train(args):
     print(f"데이터:     {args.data_dir}")
     print(f"체크포인트: {args.ckpt_path}")
     print(f"출력:       {args.out_dir}")
-    print(f"LoRA:       rank={args.lora_rank}, alpha={args.lora_alpha}, "
-          f"dropout={args.lora_dropout}")
+    print(
+        f"LoRA:       rank={args.lora_rank}, alpha={args.lora_alpha}, "
+        f"dropout={args.lora_dropout}"
+    )
     print(f"RLM:        p={args.rlm_p}")
     print()
 
@@ -221,15 +238,30 @@ def train(args):
 
     # ── 데이터 ────────────────────────────────────────────────────────
     train_ds = CPSCDataset(os.path.join(args.data_dir, "train"))
-    val_ds   = CPSCDataset(os.path.join(args.data_dir, "val"))
-    test_ds  = CPSCDataset(os.path.join(args.data_dir, "test"))
+    val_ds = CPSCDataset(os.path.join(args.data_dir, "val"))
+    test_ds = CPSCDataset(os.path.join(args.data_dir, "test"))
 
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size,
-                              shuffle=True,  num_workers=0, pin_memory=True)
-    val_loader   = DataLoader(val_ds,   batch_size=args.batch_size,
-                              shuffle=False, num_workers=0, pin_memory=True)
-    test_loader  = DataLoader(test_ds,  batch_size=args.batch_size,
-                              shuffle=False, num_workers=0, pin_memory=True)
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=0,
+        pin_memory=True,
+    )
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=True,
+    )
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=True,
+    )
 
     n_pos = int((train_ds.labels == 1).sum())
     n_neg = int((train_ds.labels == 0).sum())
@@ -257,11 +289,13 @@ def train(args):
     for r in replaced[:4]:
         print(f"         {r}")
     if len(replaced) > 4:
-        print(f"         ... 외 {len(replaced)-4}개")
+        print(f"         ... 외 {len(replaced) - 4}개")
 
     total, trainable = count_trainable(backbone)
-    print(f"       백본 전체={total/1e6:.1f}M, LoRA 학습={trainable:,}개 "
-          f"({100*trainable/total:.2f}%)")
+    print(
+        f"       백본 전체={total / 1e6:.1f}M, LoRA 학습={trainable:,}개 "
+        f"({100 * trainable / total:.2f}%)"
+    )
 
     head = LinearHead().to(device)
     head_params = sum(p.numel() for p in head.parameters())
@@ -271,10 +305,12 @@ def train(args):
     print()
 
     # ── 옵티마이저 ────────────────────────────────────────────────────
-    trainable_params = ([p for p in backbone.parameters() if p.requires_grad]
-                        + list(head.parameters()))
-    optimizer = torch.optim.AdamW(trainable_params, lr=args.lr,
-                                  weight_decay=args.weight_decay)
+    trainable_params = [p for p in backbone.parameters() if p.requires_grad] + list(
+        head.parameters()
+    )
+    optimizer = torch.optim.AdamW(
+        trainable_params, lr=args.lr, weight_decay=args.weight_decay
+    )
 
     # 코사인 LR 스케줄러 (warmup 없음 — 단순화)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -285,10 +321,12 @@ def train(args):
 
     best_auroc = 0.0
     best_epoch = 0
-    best_path  = os.path.join(args.out_dir, "lora_best.pt")
+    best_path = os.path.join(args.out_dir, "lora_best.pt")
 
-    print(f"{'Epoch':>5} {'TrainLoss':>10} {'ValAUROC':>9} "
-          f"{'ValF1':>7} {'Sens@95Sp':>10} {'LR':>8}")
+    print(
+        f"{'Epoch':>5} {'TrainLoss':>10} {'ValAUROC':>9} "
+        f"{'ValF1':>7} {'Sens@95Sp':>10} {'LR':>8}"
+    )
     print("-" * 55)
 
     for epoch in range(1, args.epochs + 1):
@@ -303,9 +341,9 @@ def train(args):
             if args.rlm_p > 0:
                 x = random_lead_mask(x, p=args.rlm_p)
 
-            emb    = extract_embedding(backbone, x)
+            emb = extract_embedding(backbone, x)
             logits = head(emb)
-            loss   = criterion(logits, y)
+            loss = criterion(logits, y)
 
             optimizer.zero_grad()
             loss.backward()
@@ -319,22 +357,28 @@ def train(args):
         cur_lr = scheduler.get_last_lr()[0]
 
         marker = " ←" if val_auroc > best_auroc else ""
-        print(f"{epoch:5d} {avg_loss:10.4f} {val_auroc:9.4f} {val_f1:7.4f} "
-              f"{val_sens:10.4f} {cur_lr:8.2e}{marker}")
+        print(
+            f"{epoch:5d} {avg_loss:10.4f} {val_auroc:9.4f} {val_f1:7.4f} "
+            f"{val_sens:10.4f} {cur_lr:8.2e}{marker}"
+        )
 
         if val_auroc > best_auroc:
             best_auroc = val_auroc
             best_epoch = epoch
-            torch.save({
-                "epoch":        epoch,
-                "backbone_lora": {k: v for k, v in backbone.state_dict().items()
-                                  if "lora_" in k},
-                "head_state":   head.state_dict(),
-                "val_auroc":    val_auroc,
-                "val_f1":       val_f1,
-                "lora_rank":    args.lora_rank,
-                "lora_alpha":   args.lora_alpha,
-            }, best_path)
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "backbone_lora": {
+                        k: v for k, v in backbone.state_dict().items() if "lora_" in k
+                    },
+                    "head_state": head.state_dict(),
+                    "val_auroc": val_auroc,
+                    "val_f1": val_f1,
+                    "lora_rank": args.lora_rank,
+                    "lora_alpha": args.lora_alpha,
+                },
+                best_path,
+            )
 
     # ── 테스트 평가 ───────────────────────────────────────────────────
     print()
@@ -364,21 +408,24 @@ def train(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data_dir",
-        default="data/processed/cpsc2018")
-    parser.add_argument("--ckpt_path",
-        default="checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt")
-    parser.add_argument("--out_dir",
-        default="outputs/lora")
-    parser.add_argument("--batch_size",   type=int,   default=16)
-    parser.add_argument("--epochs",       type=int,   default=30)
-    parser.add_argument("--lr",           type=float, default=5e-4)
+    parser.add_argument("--data_dir", default="data/processed/cpsc2018")
+    parser.add_argument(
+        "--ckpt_path", default="checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+    )
+    parser.add_argument("--out_dir", default="outputs/lora")
+    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--weight_decay", type=float, default=1e-2)
-    parser.add_argument("--lora_rank",    type=int,   default=8)
-    parser.add_argument("--lora_alpha",   type=float, default=16.0)
+    parser.add_argument("--lora_rank", type=int, default=8)
+    parser.add_argument("--lora_alpha", type=float, default=16.0)
     parser.add_argument("--lora_dropout", type=float, default=0.1)
-    parser.add_argument("--rlm_p",        type=float, default=0.5,
-                        help="RLM: 각 lead가 0-fill될 확률 (0=비활성)")
+    parser.add_argument(
+        "--rlm_p",
+        type=float,
+        default=0.5,
+        help="RLM: 각 lead가 0-fill될 확률 (0=비활성)",
+    )
     args = parser.parse_args()
     train(args)
 

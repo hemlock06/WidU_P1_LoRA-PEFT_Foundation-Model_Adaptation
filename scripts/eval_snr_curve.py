@@ -33,20 +33,20 @@ try:
 except Exception:
     pass
 
+from multisnr import MultiSNRNoise
 from train_lora import (
     CPSCDataset,
     LinearHead,
     inject_lora,
     load_ecgfm,
 )
-from multisnr import MultiSNRNoise
 
 try:
-    from sklearn.metrics import roc_auc_score, f1_score, roc_curve
+    from sklearn.metrics import f1_score, roc_auc_score, roc_curve
 except ImportError:
     sys.exit("[오류] scikit-learn 미설치")
 
-SNR_LEVELS = [None, 24, 18, 12, 6, 0, -6]   # None = clean
+SNR_LEVELS = [None, 24, 18, 12, 6, 0, -6]  # None = clean
 
 
 def load_lora_model(ckpt_path, ecgfm_ckpt, device):
@@ -97,7 +97,9 @@ def run_model(name, ckpt_path, args, device, test_loader, multisnr):
     for i, snr in enumerate(SNR_LEVELS):
         # 동일 시드 → ②와 ③가 같은 노이즈 realization을 봄 (공정 비교)
         multisnr.rng = np.random.default_rng(1000 + i)
-        auroc, f1, sens = eval_at_snr(backbone, head, test_loader, device, multisnr, snr)
+        auroc, f1, sens = eval_at_snr(
+            backbone, head, test_loader, device, multisnr, snr
+        )
         aurocs.append(auroc)
         tag = "clean" if snr is None else f"{snr:>3}dB"
         print(f"    SNR {tag}: AUROC={auroc:.4f}  F1={f1:.4f}  Sens@95Sp={sens:.4f}")
@@ -108,26 +110,36 @@ def run_model(name, ckpt_path, args, device, test_loader, multisnr):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--data_dir",
-        default="data/processed/cpsc2018")
-    p.add_argument("--ckpt_path",
-        default="checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt")
-    p.add_argument("--nstdb_dir",
-        default="data/raw/nstdb")
-    p.add_argument("--lora2_ckpt",
-        default="outputs/lora/lora_best.pt")
-    p.add_argument("--lora3_ckpt",
-        default="outputs/lora_multisnr/lora_multisnr_best.pt")
-    p.add_argument("--out_dir",
-        default="outputs/snr_curve")
+    p.add_argument("--data_dir", default="data/processed/cpsc2018")
+    p.add_argument(
+        "--ckpt_path", default="checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+    )
+    p.add_argument("--nstdb_dir", default="data/raw/nstdb")
+    p.add_argument("--lora2_ckpt", default="outputs/lora/lora_best.pt")
+    p.add_argument(
+        "--lora3_ckpt", default="outputs/lora_multisnr/lora_multisnr_best.pt"
+    )
+    p.add_argument("--out_dir", default="outputs/snr_curve")
     p.add_argument("--batch_size", type=int, default=16)
-    p.add_argument("--noise_mode", type=str, default="single",
+    p.add_argument(
+        "--noise_mode",
+        type=str,
+        default="single",
         choices=["single", "mixed"],
-        help="평가 노이즈 합성 모드 (single=리드당 1종 / mixed=3종 가중합성)")
-    p.add_argument("--label2", type=str, default="lora2_clean",
-        help="첫째 모델(--lora2_ckpt) CSV 행 라벨")
-    p.add_argument("--label3", type=str, default="lora3_multisnr",
-        help="둘째 모델(--lora3_ckpt) CSV 행 라벨")
+        help="평가 노이즈 합성 모드 (single=리드당 1종 / mixed=3종 가중합성)",
+    )
+    p.add_argument(
+        "--label2",
+        type=str,
+        default="lora2_clean",
+        help="첫째 모델(--lora2_ckpt) CSV 행 라벨",
+    )
+    p.add_argument(
+        "--label3",
+        type=str,
+        default="lora3_multisnr",
+        help="둘째 모델(--lora3_ckpt) CSV 행 라벨",
+    )
     p.add_argument("--name2", type=str, default="② LoRA+RLM (clean)")
     p.add_argument("--name3", type=str, default="③ LoRA+RLM+multi-SNR")
     args = p.parse_args()
@@ -144,8 +156,9 @@ def main():
     test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False)
     print(f"test set: {len(test_ds)}개")
 
-    multisnr = MultiSNRNoise(nstdb_dir=args.nstdb_dir, device=device, seed=42,
-                             noise_mode=args.noise_mode)
+    multisnr = MultiSNRNoise(
+        nstdb_dir=args.nstdb_dir, device=device, seed=42, noise_mode=args.noise_mode
+    )
     print(f"평가 노이즈 모드: {args.noise_mode}")
 
     res2 = run_model(args.name2, args.lora2_ckpt, args, device, test_loader, multisnr)
@@ -154,21 +167,31 @@ def main():
     # ── CSV 저장 ──────────────────────────────────────────────────────
     csv_path = os.path.join(args.out_dir, "snr_curve.csv")
     with open(csv_path, "w", encoding="utf-8") as f:
-        f.write("SNR_dB," + ",".join(["clean" if s is None else str(s) for s in SNR_LEVELS]) + "\n")
-        if res2: f.write(f"{args.label2}," + ",".join(f"{a:.4f}" for a in res2) + "\n")
-        if res3: f.write(f"{args.label3}," + ",".join(f"{a:.4f}" for a in res3) + "\n")
+        f.write(
+            "SNR_dB,"
+            + ",".join(["clean" if s is None else str(s) for s in SNR_LEVELS])
+            + "\n"
+        )
+        if res2:
+            f.write(f"{args.label2}," + ",".join(f"{a:.4f}" for a in res2) + "\n")
+        if res3:
+            f.write(f"{args.label3}," + ",".join(f"{a:.4f}" for a in res3) + "\n")
     print(f"\n[저장] CSV: {csv_path}")
 
     # ── PNG 그래프 ────────────────────────────────────────────────────
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         xticks = ["clean" if s is None else f"{s}" for s in SNR_LEVELS]
         xpos = list(range(len(SNR_LEVELS)))
         plt.figure(figsize=(8, 5))
-        if res2: plt.plot(xpos, res2, "o-", label="② LoRA+RLM (clean)")
-        if res3: plt.plot(xpos, res3, "s-", label="③ LoRA+RLM+multi-SNR")
+        if res2:
+            plt.plot(xpos, res2, "o-", label="② LoRA+RLM (clean)")
+        if res3:
+            plt.plot(xpos, res3, "s-", label="③ LoRA+RLM+multi-SNR")
         plt.xticks(xpos, xticks)
         plt.xlabel("SNR (dB)  ←  noise increases")
         plt.ylabel("AUROC")

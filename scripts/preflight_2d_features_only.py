@@ -25,7 +25,7 @@ import torch
 LEAD_NAMES = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
 FS = 500
 WINDOW_LEN = FS * 10  # 5000 샘플
-EMBED_DIM = 768        # ECG-FM transformer 출력 차원
+EMBED_DIM = 768  # ECG-FM transformer 출력 차원
 
 
 def make_dummy_ecg(seed=42):
@@ -44,6 +44,7 @@ def apply_zero_mask(signal, available_leads):
 
 def load_model(ckpt_path, device):
     from fairseq_signals.utils.checkpoint_utils import load_model_and_task
+
     # 진단에서 확인된 올바른 시그니처: load_model_and_task(filename, ...)
     result = load_model_and_task(ckpt_path)
     # result는 tuple — 첫 번째 모델 객체 추출
@@ -131,7 +132,7 @@ def embedding_stats(emb):
     has_nan = bool(np.isnan(arr).any())
     has_inf = bool(np.isinf(arr).any())
     mean = float(np.nanmean(arr))
-    std  = float(np.nanstd(arr))
+    std = float(np.nanstd(arr))
     ok = not has_nan and not has_inf and 0.001 < std < 500
     return has_nan, has_inf, mean, std, ok
 
@@ -149,7 +150,9 @@ def main():
     print("=" * 65)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"디바이스: {device} / GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'}")
+    print(
+        f"디바이스: {device} / GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'}"
+    )
     print(f"체크포인트: {args.checkpoint}")
     print()
 
@@ -159,7 +162,7 @@ def main():
         model = load_model(args.checkpoint, device)
         model.eval()
         total = sum(p.numel() for p in model.parameters())
-        print(f"  {type(model).__name__}, {total/1e6:.1f}M params")
+        print(f"  {type(model).__name__}, {total / 1e6:.1f}M params")
     except Exception as e:
         print(f"  [오류] 로드 실패: {e}")
         traceback.print_exc()
@@ -182,7 +185,9 @@ def main():
     print(f"  mean={mean:.4f}, std={std:.4f}, NaN={has_nan}, Inf={has_inf}")
 
     if emb12.shape[-1] != EMBED_DIM:
-        print(f"  [주의] dim={emb12.shape[-1]} ≠ {EMBED_DIM}: 다른 출력 키를 얻은 것 같음.")
+        print(
+            f"  [주의] dim={emb12.shape[-1]} ≠ {EMBED_DIM}: 다른 출력 키를 얻은 것 같음."
+        )
         print("         위 '출력 dict 키/shape' 목록을 확인하세요.")
     print()
 
@@ -191,11 +196,11 @@ def main():
     print("-" * 55)
 
     test_cases = [
-        ("12-lead",                   list(range(12))),
+        ("12-lead", list(range(12))),
         ("4-lead (I,II,V2,V5)+0fill", [0, 1, 7, 10]),
-        ("2-lead (I,II)+0fill",       [0, 1]),
-        ("1-lead (II)+0fill",         [1]),
-        ("0-lead (극단)",              []),
+        ("2-lead (I,II)+0fill", [0, 1]),
+        ("1-lead (II)+0fill", [1]),
+        ("0-lead (극단)", []),
     ]
 
     all_pass = True
@@ -211,9 +216,13 @@ def main():
 
         has_nan, has_inf, mean, std, ok = embedding_stats(emb)
         status = "" if ok else "[오류] "
-        lead_str = f"[{','.join(LEAD_NAMES[i] for i in available)}]" if available else "[없음]"
+        lead_str = (
+            f"[{','.join(LEAD_NAMES[i] for i in available)}]" if available else "[없음]"
+        )
         print(f"  {status} {name} {lead_str}")
-        print(f"     shape={tuple(emb.shape)}, std={std:.4f}, NaN={has_nan}, Inf={has_inf}")
+        print(
+            f"     shape={tuple(emb.shape)}, std={std:.4f}, NaN={has_nan}, Inf={has_inf}"
+        )
         if not ok:
             all_pass = False
 
@@ -244,7 +253,9 @@ def main():
     else:
         print("[오류] 추가 조치 필요 — 아래 정보를 확인하세요:")
         if emb12 is not None and emb12.shape[-1] != EMBED_DIM:
-            print(f"   - 출력 dim={emb12.shape[-1]} (768 아님): dict 키 목록 위에 출력됨")
+            print(
+                f"   - 출력 dim={emb12.shape[-1]} (768 아님): dict 키 목록 위에 출력됨"
+            )
         if not all_pass:
             print("   - 일부 lead 구성에서 NaN/Inf 발생")
     print("=" * 65)

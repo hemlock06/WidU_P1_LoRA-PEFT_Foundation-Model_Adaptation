@@ -31,14 +31,15 @@ from urllib.parse import urljoin
 import requests
 from tqdm import tqdm
 
-BASE_URL   = "https://physionet.org/files/challenge-2020/1.0.2/training/cpsc_2018/"
-GROUPS     = [f"g{i}" for i in range(1, 8)]   # g1 ~ g7
+BASE_URL = "https://physionet.org/files/challenge-2020/1.0.2/training/cpsc_2018/"
+GROUPS = [f"g{i}" for i in range(1, 8)]  # g1 ~ g7
 DEFAULT_DEST = "data/raw/cpsc2018"
-TIMEOUT    = 30   # 초 (단일 요청)
+TIMEOUT = 30  # 초 (단일 요청)
 CHUNK_SIZE = 1024 * 64  # 64 KB
 
 
 # ── HTML 디렉터리 파싱 ────────────────────────────────────────────────
+
 
 class LinkParser(HTMLParser):
     """PhysioNet Apache 디렉터리 리스팅에서 파일 링크 추출."""
@@ -50,7 +51,12 @@ class LinkParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag == "a":
             for name, val in attrs:
-                if name == "href" and val and not val.startswith("?") and not val.startswith("/"):
+                if (
+                    name == "href"
+                    and val
+                    and not val.startswith("?")
+                    and not val.startswith("/")
+                ):
                     self.links.append(val)
 
 
@@ -65,7 +71,10 @@ def list_directory(url: str, session: requests.Session) -> list[str]:
 
 # ── 파일 다운로드 ─────────────────────────────────────────────────────
 
-def download_file(url: str, dest_path: str, session: requests.Session) -> tuple[str, str]:
+
+def download_file(
+    url: str, dest_path: str, session: requests.Session
+) -> tuple[str, str]:
     """
     단일 파일 다운로드. 이미 존재하고 크기가 0보다 크면 스킵.
     반환: ("ok"|"skip"|"err", 메시지)
@@ -85,7 +94,7 @@ def download_file(url: str, dest_path: str, session: requests.Session) -> tuple[
             return "ok", dest_path
         except Exception as e:
             if attempt < 4:
-                time.sleep(2 ** attempt)   # 2s, 4s, 8s
+                time.sleep(2**attempt)  # 2s, 4s, 8s
             else:
                 return "err", f"{url} → {e}"
 
@@ -93,6 +102,7 @@ def download_file(url: str, dest_path: str, session: requests.Session) -> tuple[
 
 
 # ── 태스크 수집 ───────────────────────────────────────────────────────
+
 
 def collect_tasks(dest_dir: str, session: requests.Session) -> list[tuple[str, str]]:
     """
@@ -102,7 +112,7 @@ def collect_tasks(dest_dir: str, session: requests.Session) -> list[tuple[str, s
     tasks = []
 
     # REFERENCE.csv (루트)
-    ref_url  = urljoin(BASE_URL, "REFERENCE.csv")
+    ref_url = urljoin(BASE_URL, "REFERENCE.csv")
     ref_dest = os.path.join(dest_dir, "REFERENCE.csv")
     tasks.append((ref_url, ref_dest))
 
@@ -120,8 +130,8 @@ def collect_tasks(dest_dir: str, session: requests.Session) -> list[tuple[str, s
             # .hea 또는 .mat 파일만 수집
             if not (link.endswith(".hea") or link.endswith(".mat")):
                 continue
-            file_url  = urljoin(group_url, link)
-            file_dest = os.path.join(dest_dir, link)   # 단일 폴더에 평탄화
+            file_url = urljoin(group_url, link)
+            file_dest = os.path.join(dest_dir, link)  # 단일 폴더에 평탄화
             tasks.append((file_url, file_dest))
             count += 1
 
@@ -132,12 +142,15 @@ def collect_tasks(dest_dir: str, session: requests.Session) -> list[tuple[str, s
 
 # ── 메인 ─────────────────────────────────────────────────────────────
 
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dest",    default=DEFAULT_DEST,
-                        help="저장 폴더 (기본: %(default)s)")
-    parser.add_argument("--workers", type=int, default=4,
-                        help="병렬 다운로드 수 (기본: %(default)s)")
+    parser.add_argument(
+        "--dest", default=DEFAULT_DEST, help="저장 폴더 (기본: %(default)s)"
+    )
+    parser.add_argument(
+        "--workers", type=int, default=4, help="병렬 다운로드 수 (기본: %(default)s)"
+    )
     args = parser.parse_args()
 
     dest_dir = os.path.abspath(args.dest)
@@ -159,9 +172,9 @@ def main():
     print(f"\n총 {total}개 파일 대상 (REFERENCE.csv 포함)\n")
 
     # 2. 병렬 다운로드
-    ok_count   = 0
+    ok_count = 0
     skip_count = 0
-    err_list   = []
+    err_list = []
 
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         futures = {
@@ -192,13 +205,14 @@ def main():
         for e in err_list[:10]:
             print(f"    {e}")
         if len(err_list) > 10:
-            print(f"    ... 외 {len(err_list)-10}개")
+            print(f"    ... 외 {len(err_list) - 10}개")
     print()
 
     # 4. REFERENCE.csv 확인
     ref_path = os.path.join(dest_dir, "REFERENCE.csv")
     if os.path.exists(ref_path):
         import csv
+
         with open(ref_path, newline="") as f:
             rows = list(csv.reader(f))
         print(f"REFERENCE.csv: {len(rows)}개 레코드")
@@ -210,7 +224,7 @@ def main():
     print(f".hea 파일: {hea_count}개,  .mat 파일: {mat_count}개")
     print()
     print("다음 단계:")
-    print(f"  python scripts/preprocess_cpsc2018.py --data_dir \"{dest_dir}\"")
+    print(f'  python scripts/preprocess_cpsc2018.py --data_dir "{dest_dir}"')
     print("=" * 65)
 
 

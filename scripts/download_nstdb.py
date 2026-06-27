@@ -55,8 +55,10 @@ def main():
     for rec in NOISE_RECORDS:
         path = os.path.join(DEST, rec)
         sig, fields = wfdb.rdsamp(path)
-        print(f"  {rec}: shape={sig.shape}, fs={fields['fs']}Hz, "
-              f"units={fields['units']}, leads={fields['sig_name']}")
+        print(
+            f"  {rec}: shape={sig.shape}, fs={fields['fs']}Hz, "
+            f"units={fields['units']}, leads={fields['sig_name']}"
+        )
 
     print("\n[완료] NSTDB 노이즈 소스 확보 — multi-SNR 증강 준비됨")
 

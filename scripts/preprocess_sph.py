@@ -26,8 +26,14 @@ multi-label 축약(SPH는 multi-label): 우선순위 Ischemia(2) > AF(1) > Condu
   보강 타깃 ischemia를 최대 보존. 대상 클래스(1~4) 전무 + Normal(1) → NSR(0). 매핑 코드 전무 → 제외.
 labels_bin: 응급=1 (AF·Ischemia = class {1,2}), 정상=0. — CPSC mc 규약과 동일.
 """
+
 from __future__ import annotations
-import argparse, os, sys, csv, collections
+
+import argparse
+import collections
+import csv
+import os
+import sys
 
 import numpy as np
 
@@ -37,19 +43,37 @@ except Exception:
     pass
 
 CLASS_NAMES = ["NSR", "AF", "Ischemia", "Conduction", "Ectopic"]
-EMERGENCY = {1, 2}            # AF, Ischemia → labels_bin=1
+EMERGENCY = {1, 2}  # AF, Ischemia → labels_bin=1
 TARGET_FS = 500
-SEG_LEN = 5000               # 10초 @500Hz
-PRIORITY = [2, 1, 3, 4]      # ischemia 우선, 그 다음 AF·conduction·ectopic; 마지막 NSR(0)
+SEG_LEN = 5000  # 10초 @500Hz
+PRIORITY = [2, 1, 3, 4]  # ischemia 우선, 그 다음 AF·conduction·ectopic; 마지막 NSR(0)
 
 # AHA primary code → 5-class
 AHA2CLASS = {
-    1: 0,                                          # NSR
-    50: 1,                                          # AF
-    145: 2, 146: 2, 160: 2, 161: 2, 165: 2, 166: 2,  # Ischemia (ST dev / MI)
-    82: 3, 83: 3, 84: 3, 85: 3, 86: 3, 87: 3, 88: 3,  # AV blocks (I-AVB 등)
-    101: 3, 102: 3, 104: 3, 105: 3, 106: 3,          # fascicular / bundle branch
-    30: 4, 31: 4, 36: 4, 60: 4,                       # ectopic (APC/junctional/VPC)
+    1: 0,  # NSR
+    50: 1,  # AF
+    145: 2,
+    146: 2,
+    160: 2,
+    161: 2,
+    165: 2,
+    166: 2,  # Ischemia (ST dev / MI)
+    82: 3,
+    83: 3,
+    84: 3,
+    85: 3,
+    86: 3,
+    87: 3,
+    88: 3,  # AV blocks (I-AVB 등)
+    101: 3,
+    102: 3,
+    104: 3,
+    105: 3,
+    106: 3,  # fascicular / bundle branch
+    30: 4,
+    31: 4,
+    36: 4,
+    60: 4,  # ectopic (APC/junctional/VPC)
 }
 
 
@@ -86,7 +110,7 @@ def analyze(meta_path):
     rows = read_metadata(meta_path)
     n = len(rows)
     dist = collections.Counter()
-    multi = 0                      # 대상 클래스(1~4) 2개 이상 보유(축약 전)
+    multi = 0  # 대상 클래스(1~4) 2개 이상 보유(축약 전)
     excluded = 0
     pat_by_cls = collections.defaultdict(set)
     lens = collections.Counter()
@@ -108,31 +132,50 @@ def analyze(meta_path):
     print("=" * 64)
     print(f"{'class':<12} {'records':>8} {'patients':>9}")
     for c in range(5):
-        print(f"  [{c}] {CLASS_NAMES[c]:<8} {dist.get(c,0):>8} {len(pat_by_cls[c]):>9}")
-    print(f"  [-1] 제외      {dist.get(-1,0):>8}")
+        print(
+            f"  [{c}] {CLASS_NAMES[c]:<8} {dist.get(c, 0):>8} {len(pat_by_cls[c]):>9}"
+        )
+    print(f"  [-1] 제외      {dist.get(-1, 0):>8}")
     used = n - dist.get(-1, 0)
     n_emerg = sum(dist.get(c, 0) for c in EMERGENCY)
     print("-" * 32)
-    print(f"  사용 가능       {used:>8}  (전체의 {100*used/n:.1f}%)")
-    print(f"  응급(AF+허혈)   {n_emerg:>8}  | 정상/기타 {used-n_emerg:>8}")
-    print(f"  다중대상(축약 전 1~4 ≥2) {multi}  ({100*multi/n:.1f}%)")
-    print("  레코드 길이 분포(N): " + ", ".join(f"{k}={v}" for k, v in sorted(lens.items())[:8]))
+    print(f"  사용 가능       {used:>8}  (전체의 {100 * used / n:.1f}%)")
+    print(f"  응급(AF+허혈)   {n_emerg:>8}  | 정상/기타 {used - n_emerg:>8}")
+    print(f"  다중대상(축약 전 1~4 ≥2) {multi}  ({100 * multi / n:.1f}%)")
+    print(
+        "  레코드 길이 분포(N): "
+        + ", ".join(f"{k}={v}" for k, v in sorted(lens.items())[:8])
+    )
     print()
-    print("주: 우선순위 축약 Ischemia>AF>Conduction>Ectopic>NSR. 비대상/모호 코드 제외(-1).")
+    print(
+        "주: 우선순위 축약 Ischemia>AF>Conduction>Ectopic>NSR. 비대상/모호 코드 제외(-1)."
+    )
     return dist
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--sph_dir", default="data/raw/sph", help="metadata.csv·code.csv·records 위치")
+    ap.add_argument(
+        "--sph_dir", default="data/raw/sph", help="metadata.csv·code.csv·records 위치"
+    )
     ap.add_argument("--records_tar", default="data/raw/sph/records.tar.gz")
-    ap.add_argument("--records_dir", default="data/raw/sph/records",
-                    help="추출된 *.h5 디렉터리 (full 모드)")
+    ap.add_argument(
+        "--records_dir",
+        default="data/raw/sph/records",
+        help="추출된 *.h5 디렉터리 (full 모드)",
+    )
     ap.add_argument("--out_dir", default="data/processed/sph")
-    ap.add_argument("--clip_mv", type=float, default=8.0,
-                    help="진폭 클리핑 ±mV (SPH 극단 아티팩트 제거; CPSC p99≈7.6 포함). 0=비활성")
-    ap.add_argument("--analyze_only", action="store_true",
-                    help="metadata.csv만으로 매핑/분포 검증 (신호 미접근)")
+    ap.add_argument(
+        "--clip_mv",
+        type=float,
+        default=8.0,
+        help="진폭 클리핑 ±mV (SPH 극단 아티팩트 제거; CPSC p99≈7.6 포함). 0=비활성",
+    )
+    ap.add_argument(
+        "--analyze_only",
+        action="store_true",
+        help="metadata.csv만으로 매핑/분포 검증 (신호 미접근)",
+    )
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
@@ -144,7 +187,11 @@ def main():
 
     # ── full 전처리: tar에서 HDF5 직접 적재 → npy (메모리 안전: split별 사전할당·저장·해제) ──
     # 16GB RAM 환경 → 전체 list+stack(≈9GB) 금지. split별 np.empty 사전할당 후 in-place 채움.
-    import h5py, tarfile, io as _io
+    import io as _io
+    import tarfile
+
+    import h5py
+
     rows = read_metadata(meta_path)
     rng = np.random.default_rng(args.seed)
 
@@ -156,7 +203,8 @@ def main():
             recs.append((r["ECG_ID"], r["Patient_ID"], lab))
     pats = sorted({p for _, p, _ in recs})
     rng.shuffle(pats)
-    n_tr = int(0.70 * len(pats)); n_va = int(0.15 * len(pats))
+    n_tr = int(0.70 * len(pats))
+    n_va = int(0.15 * len(pats))
     split_of = {}
     for i, p in enumerate(pats):
         split_of[p] = "train" if i < n_tr else ("val" if i < n_tr + n_va else "test")
@@ -165,20 +213,25 @@ def main():
         by_split[split_of[pid]].append((ecg_id, lab))
 
     print(f"[tar] 인덱스 구축: {args.records_tar}")
-    tf = tarfile.open(args.records_tar, "r")          # 실제 비압축 tar (auto-detect)
+    tf = tarfile.open(args.records_tar, "r")  # 실제 비압축 tar (auto-detect)
     name2m = {m.name: m for m in tf.getmembers() if m.isfile()}
     print(f"      멤버 {len(name2m)}개")
 
     os.makedirs(args.out_dir, exist_ok=True)
     for s in ("train", "val", "test"):
-        items = by_split[s]; n = len(items)
-        sig = np.empty((n, 12, SEG_LEN), dtype=np.float32)   # split별 사전할당
-        mc  = np.empty(n, dtype=np.int64); bn = np.empty(n, dtype=np.int64); ids = []
-        w = 0; miss = 0
+        items = by_split[s]
+        n = len(items)
+        sig = np.empty((n, 12, SEG_LEN), dtype=np.float32)  # split별 사전할당
+        mc = np.empty(n, dtype=np.int64)
+        bn = np.empty(n, dtype=np.int64)
+        ids = []
+        w = 0
+        miss = 0
         for ecg_id, lab in items:
             m = name2m.get(f"records/{ecg_id}.h5")
             if m is None:
-                miss += 1; continue
+                miss += 1
+                continue
             with h5py.File(_io.BytesIO(tf.extractfile(m).read()), "r") as hf:
                 arr = np.asarray(hf["ecg"], dtype=np.float32)
             if arr.shape[0] != 12 and arr.shape[-1] == 12:
@@ -187,18 +240,24 @@ def main():
                 arr = arr[:, :SEG_LEN]
             else:
                 arr = np.pad(arr, ((0, 0), (0, SEG_LEN - arr.shape[1])))
-            if args.clip_mv > 0:                         # SPH ~1.1% 병적 아티팩트(최대 452mV) 제거
+            if args.clip_mv > 0:  # SPH ~1.1% 병적 아티팩트(최대 452mV) 제거
                 np.clip(arr, -args.clip_mv, args.clip_mv, out=arr)
-            sig[w] = arr; mc[w] = lab; bn[w] = 1 if lab in EMERGENCY else 0
-            ids.append(ecg_id); w += 1
-        sig = sig[:w]; mc = mc[:w]; bn = bn[:w]
-        d = os.path.join(args.out_dir, s); os.makedirs(d, exist_ok=True)
+            sig[w] = arr
+            mc[w] = lab
+            bn[w] = 1 if lab in EMERGENCY else 0
+            ids.append(ecg_id)
+            w += 1
+        sig = sig[:w]
+        mc = mc[:w]
+        bn = bn[:w]
+        d = os.path.join(args.out_dir, s)
+        os.makedirs(d, exist_ok=True)
         np.save(os.path.join(d, "signals.npy"), sig)
         np.save(os.path.join(d, "labels.npy"), mc)
         np.save(os.path.join(d, "labels_bin.npy"), bn)
         np.save(os.path.join(d, "record_ids.npy"), np.array(ids))
         print(f"  {s}: {w}개 저장 (누락 {miss}) → {d}")
-        del sig, mc, bn                                # 다음 split 전 메모리 해제
+        del sig, mc, bn  # 다음 split 전 메모리 해제
     tf.close()
 
 

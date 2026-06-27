@@ -18,8 +18,17 @@ CACHET-CADB 개인화 타당성 — per-subject AF 이벤트 분포 점검
   python scripts/analyze_cachet_personalization.py --src D:/Downloads/CACHETCADB
   python scripts/analyze_cachet_personalization.py --src D:/Downloads/CACHETCADB.zip
 """
+
 from __future__ import annotations
-import argparse, os, io, csv, re, collections, zipfile, sys
+
+import argparse
+import collections
+import csv
+import io
+import os
+import re
+import sys
+import zipfile
 
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -54,13 +63,17 @@ def iter_annotation_csv(src: str):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--src", default="D:/Downloads/CACHETCADB",
-                    help="CACHET-CADB 추출 디렉터리 또는 .zip 경로")
+    ap.add_argument(
+        "--src",
+        default="D:/Downloads/CACHETCADB",
+        help="CACHET-CADB 추출 디렉터리 또는 .zip 경로",
+    )
     args = ap.parse_args()
 
-    per = collections.defaultdict(collections.Counter)   # subj -> Counter(class)
+    per = collections.defaultdict(collections.Counter)  # subj -> Counter(class)
     for subj, fh in iter_annotation_csv(args.src):
-        rd = csv.reader(fh); next(rd, None)              # 헤더 skip
+        rd = csv.reader(fh)
+        next(rd, None)  # 헤더 skip
         for row in rd:
             if len(row) >= 3 and row[2].strip().lstrip("-").isdigit():
                 per[subj][int(row[2])] += 1
@@ -76,13 +89,17 @@ def main():
     print(f"CACHET-CADB 개인화 타당성 점검  (src={args.src})")
     print("=" * 64)
     print(f"subject 수: {len(subs)}  | 총 주석 샘플: {total} (descriptor: 1602)")
-    print("전역 클래스 분포:",
-          {f"{k}={CLASS_NAME.get(k,k)}": v for k, v in sorted(glob.items())})
+    print(
+        "전역 클래스 분포:",
+        {f"{k}={CLASS_NAME.get(k, k)}": v for k, v in sorted(glob.items())},
+    )
     print()
     af = {s: per[s].get(AF, 0) for s in subs}
     n_suff = sum(1 for v in af.values() if v >= MIN_EVENTS)
     n_any = sum(1 for v in af.values() if v >= 1)
-    print(f"[AF(이상) per-subject]  ≥{MIN_EVENTS}건: {n_suff}/{len(subs)}명  | ≥1건: {n_any}/{len(subs)}명")
+    print(
+        f"[AF(이상) per-subject]  ≥{MIN_EVENTS}건: {n_suff}/{len(subs)}명  | ≥1건: {n_any}/{len(subs)}명"
+    )
     print("  AF 보유 subject (내림차순):")
     for s in sorted(subs, key=lambda x: -af[x]):
         if af[s] > 0:
@@ -90,10 +107,16 @@ def main():
     print()
     print("판정:")
     if n_suff >= len(subs) * 0.5:
-        print(f"  → 다수({n_suff}/{len(subs)})가 사람당 충분 → 개인화 적응·평가 통계 성립 가능.")
+        print(
+            f"  → 다수({n_suff}/{len(subs)})가 사람당 충분 → 개인화 적응·평가 통계 성립 가능."
+        )
     else:
-        print(f"  → 소수({n_suff}/{len(subs)})만 사람당 충분 = 편중 → within-subject 개인화 평가 불성립.")
-        print("    + AF 모집단 검출 이미 높음(records/03) → 한계이득 입증 곤란 → 개인화 미진입(데이터 부족).")
+        print(
+            f"  → 소수({n_suff}/{len(subs)})만 사람당 충분 = 편중 → within-subject 개인화 평가 불성립."
+        )
+        print(
+            "    + AF 모집단 검출 이미 높음(records/03) → 한계이득 입증 곤란 → 개인화 미진입(데이터 부족)."
+        )
 
 
 if __name__ == "__main__":

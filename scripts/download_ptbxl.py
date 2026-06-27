@@ -15,9 +15,9 @@ PhysioNet ptb-xl/1.0.3 다운로드.
 import argparse
 import os
 import sys
+import threading
 import time
 import urllib.request
-import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
@@ -27,8 +27,8 @@ OUT_DEFAULT = "data/raw/ptbxl"
 
 # 필요한 파일 목록 (500Hz 레코드 + 라벨만)
 ESSENTIAL_FILES = [
-    "ptbxl_database.csv",       # 라벨 + 메타데이터
-    "scp_statements.csv",        # SCP → superclass 매핑
+    "ptbxl_database.csv",  # 라벨 + 메타데이터
+    "scp_statements.csv",  # SCP → superclass 매핑
     "LICENSE.txt",
     "SHA256SUMS.txt",
 ]
@@ -66,7 +66,7 @@ def _download_with_retry(url, dst, max_retries=4, base_delay=2.0):
             return True
         except Exception as e:
             if attempt < max_retries - 1:
-                delay = base_delay * (2 ** attempt)  # 2,4,8,16초
+                delay = base_delay * (2**attempt)  # 2,4,8,16초
                 time.sleep(delay)
             else:
                 return False, str(e)
@@ -77,7 +77,7 @@ def _download_one_record(args_tuple):
     """단일 레코드(.hea + .dat) 다운로드 (ThreadPoolExecutor 용)"""
     global _done, _skip, _fail
     rec_path, out_dir = args_tuple
-    rec_dir  = os.path.join(out_dir, os.path.dirname(rec_path))
+    rec_dir = os.path.join(out_dir, os.path.dirname(rec_path))
     rec_base = os.path.join(out_dir, rec_path)
     os.makedirs(rec_dir, exist_ok=True)
 
@@ -108,8 +108,10 @@ def _download_one_record(args_tuple):
         processed = _done + _skip
         if processed % 2000 == 0 and processed > 0:
             pct = processed / _total * 100
-            print(f"  진행: {processed}/{_total} ({pct:.0f}%)  신규={_done}  skip={_skip}  실패={_fail}",
-                  flush=True)
+            print(
+                f"  진행: {processed}/{_total} ({pct:.0f}%)  신규={_done}  skip={_skip}  실패={_fail}",
+                flush=True,
+            )
 
 
 def download_records_direct(out_dir, n_workers=16):
@@ -118,7 +120,9 @@ def download_records_direct(out_dir, n_workers=16):
     wfdb.dl_database의 URL 버그(버전 이중 삽입) 우회.
     """
     global _done, _skip, _fail, _total
-    _done = 0; _skip = 0; _fail = 0
+    _done = 0
+    _skip = 0
+    _fail = 0
 
     # RECORDS 파일 다운로드 (경로 목록)
     records_index_url = BASE_RECORDS_URL + "RECORDS"
@@ -130,12 +134,12 @@ def download_records_direct(out_dir, n_workers=16):
     else:
         print("  RECORDS 인덱스: 이미 존재")
 
-    with open(records_index_path, "r") as f:
+    with open(records_index_path) as f:
         all_records = [line.strip() for line in f if line.strip()]
 
     # 500Hz 레코드만 필터 (records500/로 시작하는 것)
     hr_records = [r for r in all_records if r.startswith("records500/")]
-    _total = len(hr_records) * 2   # .hea + .dat
+    _total = len(hr_records) * 2  # .hea + .dat
     print(f"  500Hz 레코드: {len(hr_records)}건 ({_total}개 파일)", flush=True)
     print(f"  병렬 스레드: {n_workers}개  (진행: 2000파일마다 출력)", flush=True)
 
@@ -150,10 +154,12 @@ def download_records_direct(out_dir, n_workers=16):
             if completed_count % 500 == 0:
                 with _lock:
                     pct = (_done + _skip) / max(_total, 1) * 100
-                    print(f"  [레코드 {completed_count}/{len(hr_records)}] "
-                          f"파일: {_done+_skip}/{_total} ({pct:.1f}%)  "
-                          f"신규={_done}  skip={_skip}  실패={_fail}",
-                          flush=True)
+                    print(
+                        f"  [레코드 {completed_count}/{len(hr_records)}] "
+                        f"파일: {_done + _skip}/{_total} ({pct:.1f}%)  "
+                        f"신규={_done}  skip={_skip}  실패={_fail}",
+                        flush=True,
+                    )
 
     print(f"\n  다운로드 완료: 신규={_done}, 기존={_skip}, 실패={_fail}")
     if _fail > 0:
@@ -161,11 +167,16 @@ def download_records_direct(out_dir, n_workers=16):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--out_dir", default=OUT_DEFAULT)
-    parser.add_argument("--workers", type=int, default=8,
-                        help="병렬 다운로드 스레드 수 (기본값 8, PhysioNet rate-limit 고려)")
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=8,
+        help="병렬 다운로드 스레드 수 (기본값 8, PhysioNet rate-limit 고려)",
+    )
     args = parser.parse_args()
 
     out_dir = args.out_dir
@@ -196,6 +207,7 @@ def main():
     csv_path = os.path.join(out_dir, "ptbxl_database.csv")
     if os.path.exists(csv_path):
         import csv
+
         with open(csv_path, encoding="utf-8") as f:
             rows = sum(1 for _ in csv.reader(f)) - 1
         print(f"라벨 파일: {csv_path} ({rows:,}건)")
@@ -205,9 +217,11 @@ def main():
         n_folders = len(os.listdir(records_dir))
         print(f"레코드 폴더: records500/ ({n_folders}개 서브폴더)")
 
-    dat_count = sum(
-        1 for _, _, fs in os.walk(records_dir) for f in fs if f.endswith(".dat")
-    ) if os.path.isdir(records_dir) else 0
+    dat_count = (
+        sum(1 for _, _, fs in os.walk(records_dir) for f in fs if f.endswith(".dat"))
+        if os.path.isdir(records_dir)
+        else 0
+    )
     print(f"다운로드된 .dat 파일: {dat_count:,}개 / 21,837개 목표")
     print("다음 단계: python scripts/preprocess_ptbxl.py")
     print("=" * 60)

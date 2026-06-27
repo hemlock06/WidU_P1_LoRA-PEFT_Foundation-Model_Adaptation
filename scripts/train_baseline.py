@@ -37,22 +37,23 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 
 try:
-    from sklearn.metrics import roc_auc_score, f1_score, roc_curve
+    from sklearn.metrics import f1_score, roc_auc_score, roc_curve
 except ImportError:
     sys.exit("[오류] scikit-learn 미설치 — pip install scikit-learn")
 
-FS        = 500
-N_LEADS   = 12
+FS = 500
+N_LEADS = 12
 N_SAMPLES = 5000
 EMBED_DIM = 768
 
 
 # ── 데이터셋 ─────────────────────────────────────────────────────────
 
+
 class CPSCDataset(Dataset):
     def __init__(self, split_dir: str):
-        self.signals = np.load(os.path.join(split_dir, "signals.npy"))   # (N,12,5000)
-        self.labels  = np.load(os.path.join(split_dir, "labels.npy"))    # (N,) int8
+        self.signals = np.load(os.path.join(split_dir, "signals.npy"))  # (N,12,5000)
+        self.labels = np.load(os.path.join(split_dir, "labels.npy"))  # (N,) int8
 
     def __len__(self):
         return len(self.labels)
@@ -65,8 +66,10 @@ class CPSCDataset(Dataset):
 
 # ── ECG-FM 로드 ───────────────────────────────────────────────────────
 
+
 def load_ecgfm(ckpt_path: str, device: torch.device):
     from fairseq_signals.utils.checkpoint_utils import load_model_and_task
+
     result = load_model_and_task(ckpt_path)
     if isinstance(result, tuple):
         for r in result:
@@ -83,12 +86,13 @@ def extract_embedding(backbone, x: torch.Tensor) -> torch.Tensor:
     x: (B, 12, 5000)
     반환: (B, 768) — features_only=True 후 시간축 mean pooling
     """
-    out  = backbone(source=x, padding_mask=None, features_only=True)
-    emb  = out["x"]          # (B, T, 768)
-    return emb.mean(dim=1)   # (B, 768)
+    out = backbone(source=x, padding_mask=None, features_only=True)
+    emb = out["x"]  # (B, T, 768)
+    return emb.mean(dim=1)  # (B, 768)
 
 
 # ── 분류 헤드 ─────────────────────────────────────────────────────────
+
 
 class LinearHead(nn.Module):
     def __init__(self, in_dim: int = EMBED_DIM):
@@ -101,6 +105,7 @@ class LinearHead(nn.Module):
 
 # ── 평가 ─────────────────────────────────────────────────────────────
 
+
 def evaluate(backbone, head, loader, device):
     head.eval()
     all_logits, all_labels = [], []
@@ -108,28 +113,29 @@ def evaluate(backbone, head, loader, device):
     with torch.no_grad():
         for x, y in loader:
             x = x.to(device)
-            emb    = extract_embedding(backbone, x)
+            emb = extract_embedding(backbone, x)
             logits = head(emb).cpu()
             all_logits.append(logits)
             all_labels.append(y)
 
     logits = torch.cat(all_logits).numpy()
     labels = torch.cat(all_labels).numpy().astype(int)
-    probs  = 1 / (1 + np.exp(-logits))   # sigmoid
+    probs = 1 / (1 + np.exp(-logits))  # sigmoid
 
     auroc = roc_auc_score(labels, probs)
-    f1    = f1_score(labels, (probs >= 0.5).astype(int), zero_division=0)
+    f1 = f1_score(labels, (probs >= 0.5).astype(int), zero_division=0)
 
     # Sensitivity @ 95% Specificity
     fpr, tpr, _ = roc_curve(labels, probs)
     spec = 1 - fpr
-    idx  = np.searchsorted(spec[::-1], 0.95)          # spec 오름차순 변환
+    idx = np.searchsorted(spec[::-1], 0.95)  # spec 오름차순 변환
     sens_at_95spec = float(tpr[::-1][idx]) if idx < len(tpr) else float("nan")
 
     return auroc, f1, sens_at_95spec
 
 
 # ── 학습 루프 ─────────────────────────────────────────────────────────
+
 
 def train(args):
     # 재현성 보장
@@ -153,15 +159,30 @@ def train(args):
 
     # ── 데이터 로드 ───────────────────────────────────────────────────
     train_ds = CPSCDataset(os.path.join(args.data_dir, "train"))
-    val_ds   = CPSCDataset(os.path.join(args.data_dir, "val"))
-    test_ds  = CPSCDataset(os.path.join(args.data_dir, "test"))
+    val_ds = CPSCDataset(os.path.join(args.data_dir, "val"))
+    test_ds = CPSCDataset(os.path.join(args.data_dir, "test"))
 
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size,
-                              shuffle=True,  num_workers=0, pin_memory=True)
-    val_loader   = DataLoader(val_ds,   batch_size=args.batch_size,
-                              shuffle=False, num_workers=0, pin_memory=True)
-    test_loader  = DataLoader(test_ds,  batch_size=args.batch_size,
-                              shuffle=False, num_workers=0, pin_memory=True)
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=0,
+        pin_memory=True,
+    )
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=True,
+    )
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=True,
+    )
 
     n_pos = int((train_ds.labels == 1).sum())
     n_neg = int((train_ds.labels == 0).sum())
@@ -177,7 +198,9 @@ def train(args):
     for p in backbone.parameters():
         p.requires_grad_(False)
     total_params = sum(p.numel() for p in backbone.parameters())
-    print(f"       {type(backbone).__name__}, {total_params/1e6:.1f}M params (전부 동결)")
+    print(
+        f"       {type(backbone).__name__}, {total_params / 1e6:.1f}M params (전부 동결)"
+    )
 
     head = LinearHead().to(device)
     head_params = sum(p.numel() for p in head.parameters())
@@ -188,11 +211,13 @@ def train(args):
     optimizer = torch.optim.Adam(head.parameters(), lr=args.lr)
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
-    best_auroc  = 0.0
-    best_epoch  = 0
-    best_path   = os.path.join(args.out_dir, "baseline_best.pt")
+    best_auroc = 0.0
+    best_epoch = 0
+    best_path = os.path.join(args.out_dir, "baseline_best.pt")
 
-    print(f"{'Epoch':>5} {'TrainLoss':>10} {'ValAUROC':>9} {'ValF1':>7} {'Sens@95Sp':>10}")
+    print(
+        f"{'Epoch':>5} {'TrainLoss':>10} {'ValAUROC':>9} {'ValF1':>7} {'Sens@95Sp':>10}"
+    )
     print("-" * 47)
 
     for epoch in range(1, args.epochs + 1):
@@ -202,9 +227,9 @@ def train(args):
 
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
-            emb    = extract_embedding(backbone, x)
+            emb = extract_embedding(backbone, x)
             logits = head(emb)
-            loss   = criterion(logits, y)
+            loss = criterion(logits, y)
 
             optimizer.zero_grad()
             loss.backward()
@@ -215,16 +240,23 @@ def train(args):
         val_auroc, val_f1, val_sens = evaluate(backbone, head, val_loader, device)
 
         marker = " ←" if val_auroc > best_auroc else ""
-        print(f"{epoch:5d} {avg_loss:10.4f} {val_auroc:9.4f} {val_f1:7.4f} "
-              f"{val_sens:10.4f}{marker}")
+        print(
+            f"{epoch:5d} {avg_loss:10.4f} {val_auroc:9.4f} {val_f1:7.4f} "
+            f"{val_sens:10.4f}{marker}"
+        )
 
         if val_auroc > best_auroc:
             best_auroc = val_auroc
             best_epoch = epoch
-            torch.save({"epoch": epoch,
-                        "head_state": head.state_dict(),
-                        "val_auroc": val_auroc,
-                        "val_f1": val_f1}, best_path)
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "head_state": head.state_dict(),
+                    "val_auroc": val_auroc,
+                    "val_f1": val_f1,
+                },
+                best_path,
+            )
 
     # ── 테스트 평가 ───────────────────────────────────────────────────
     print()
@@ -252,16 +284,15 @@ def train(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data_dir",
-        default="data/processed/cpsc2018")
-    parser.add_argument("--ckpt_path",
-        default="checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt")
-    parser.add_argument("--out_dir",
-        default="outputs/baseline")
+    parser.add_argument("--data_dir", default="data/processed/cpsc2018")
+    parser.add_argument(
+        "--ckpt_path", default="checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+    )
+    parser.add_argument("--out_dir", default="outputs/baseline")
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--epochs",     type=int, default=30)
-    parser.add_argument("--lr",         type=float, default=1e-3)
-    parser.add_argument("--seed",       type=int, default=42)
+    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
     train(args)
 

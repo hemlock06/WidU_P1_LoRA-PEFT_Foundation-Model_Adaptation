@@ -3,14 +3,20 @@
 A vs B(mixed vs mixed_temporal) 공정 비교 — 평가 노이즈는 '균일(mixed)'로 통일하고
 A·B에 동일 시드(1000+i)로 같은 노이즈 realization 적용. head_bin(이진 응급)만 사용.
 """
+
 from __future__ import annotations
-import argparse, os, sys, csv
+
+import argparse
+import csv
+import os
+import sys
+
 import numpy as np
 import torch
 
 sys.path.insert(0, os.path.dirname(__file__))
-from train_lora_multitask import load_ecgfm, inject_lora, BinaryHead
 from multisnr import MultiSNRNoise
+from train_lora_multitask import BinaryHead, inject_lora, load_ecgfm
 
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -27,10 +33,14 @@ def load_mt(ckpt_path, dev):
     for p in bb.parameters():
         p.requires_grad_(False)
     ck = torch.load(ckpt_path, map_location=dev)
-    inject_lora(bb, rank=ck.get("lora_rank", 8), alpha=ck.get("lora_alpha", 16.0), dropout=0.0)
+    inject_lora(
+        bb, rank=ck.get("lora_rank", 8), alpha=ck.get("lora_alpha", 16.0), dropout=0.0
+    )
     bb.load_state_dict(ck["backbone_lora"], strict=False)
-    hb = BinaryHead().to(dev); hb.load_state_dict(ck["head_bin_state"])
-    bb.eval(); hb.eval()
+    hb = BinaryHead().to(dev)
+    hb.load_state_dict(ck["head_bin_state"])
+    bb.eval()
+    hb.eval()
     return bb, hb
 
 
@@ -38,14 +48,16 @@ def load_mt(ckpt_path, dev):
 def bin_metrics(bb, hb, sigs, labs, dev, aug=None, snr=None, bs=64):
     probs = []
     for i in range(0, len(sigs), bs):
-        x = torch.tensor(sigs[i:i + bs], dtype=torch.float32, device=dev)
+        x = torch.tensor(sigs[i : i + bs], dtype=torch.float32, device=dev)
         if aug is not None and snr is not None:
             x = aug.inject_fixed(x, snr)
         emb = bb(source=x, padding_mask=None, features_only=True)["x"].mean(1)
         probs.append(torch.sigmoid(hb(emb)).cpu().numpy())
-    p = np.concatenate(probs); y = labs.astype(int)
+    p = np.concatenate(probs)
+    y = labs.astype(int)
     au = roc_auc_score(y, p)
-    fpr, tpr, _ = roc_curve(y, p); spec = 1 - fpr
+    fpr, tpr, _ = roc_curve(y, p)
+    spec = 1 - fpr
     idx = np.searchsorted(spec[::-1], 0.95)
     sens = float(tpr[::-1][idx]) if idx < len(tpr) else float("nan")
     return au, sens
@@ -67,23 +79,37 @@ def main():
 
     sigs = np.load(os.path.join(args.mc_dir, "signals.npy"))
     labs = np.load(os.path.join(args.mc_dir, "labels_bin.npy"))
-    aug = MultiSNRNoise(nstdb_dir=args.nstdb, device=dev, seed=42, noise_mode=args.noise_mode)
+    aug = MultiSNRNoise(
+        nstdb_dir=args.nstdb, device=dev, seed=42, noise_mode=args.noise_mode
+    )
     print(f"[{args.tag}] SNR 곡선 (이진 응급 AUROC, 평가노이즈={args.noise_mode})")
     for i, snr in enumerate(SNR_LEVELS):
-        aug.rng = np.random.default_rng(1000 + i)   # A·B 동일 노이즈 realization
-        au, sens = bin_metrics(bb, hb, sigs, labs, dev,
-                               aug=(None if snr is None else aug), snr=snr)
+        aug.rng = np.random.default_rng(1000 + i)  # A·B 동일 노이즈 realization
+        au, sens = bin_metrics(
+            bb, hb, sigs, labs, dev, aug=(None if snr is None else aug), snr=snr
+        )
         tag = "clean" if snr is None else f"{snr}dB"
-        rows += [(f"snr_{tag}_auroc", round(au, 4)), (f"snr_{tag}_sens95", round(sens, 4))]
+        rows += [
+            (f"snr_{tag}_auroc", round(au, 4)),
+            (f"snr_{tag}_sens95", round(sens, 4)),
+        ]
         print(f"   {tag:>6}: AUROC={au:.4f}  Sens95={sens:.4f}")
 
-    for db, path in [("CACHET", "data/processed/cachet"), ("INCART", "data/processed/incart"),
-                     ("STAFF", "data/processed/staffiii"), ("LTST", "data/processed/ltst")]:
+    for db, path in [
+        ("CACHET", "data/processed/cachet"),
+        ("INCART", "data/processed/incart"),
+        ("STAFF", "data/processed/staffiii"),
+        ("LTST", "data/processed/ltst"),
+    ]:
         if not os.path.isdir(path):
             continue
-        s = np.load(os.path.join(path, "signals.npy")); l = np.load(os.path.join(path, "labels.npy"))
+        s = np.load(os.path.join(path, "signals.npy"))
+        l = np.load(os.path.join(path, "labels.npy"))
         au, sens = bin_metrics(bb, hb, s, l, dev)
-        rows += [(f"ext_{db}_auroc", round(au, 4)), (f"ext_{db}_sens95", round(sens, 4))]
+        rows += [
+            (f"ext_{db}_auroc", round(au, 4)),
+            (f"ext_{db}_sens95", round(sens, 4)),
+        ]
         print(f"   {db:>6}: AUROC={au:.4f}  Sens95={sens:.4f}")
 
     os.makedirs(os.path.dirname(args.out_csv) or ".", exist_ok=True)

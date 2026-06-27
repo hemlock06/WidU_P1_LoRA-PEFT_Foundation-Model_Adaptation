@@ -38,7 +38,7 @@ except Exception:
     pass
 
 try:
-    from sklearn.metrics import roc_auc_score, f1_score, roc_curve
+    from sklearn.metrics import f1_score, roc_auc_score, roc_curve
 except ImportError:
     sys.exit("[오류] scikit-learn 미설치")
 
@@ -47,19 +47,31 @@ N_CLASSES = 5
 CLASS_NAMES = ["정상(NSR)", "AF", "급성허혈", "전도장애", "이소성"]
 EMERGENCY_CLASSES = (1, 2)  # AF + 급성허혈
 
-CKPT_FM  = "checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+CKPT_FM = "checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
 DATA_DIR = "data/processed/cpsc2018_mc_ml"
 
 MODELS = [
-    {"name": "5b lora_mc",
-     "ckpt": "outputs/lora_mc/lora_mc_best.pt",
-     "mc_key": "head_state", "bin_key": None, "mc_act": "softmax"},
-    {"name": "5d multitask_snr",
-     "ckpt": "outputs/lora_multitask_snr/lora_multitask_snr_best.pt",
-     "mc_key": "head_mc_state", "bin_key": "head_bin_state", "mc_act": "softmax"},
-    {"name": "5e multitask_ml",
-     "ckpt": "outputs/lora_multitask_ml/lora_multitask_ml_best.pt",
-     "mc_key": "head_mc_state", "bin_key": "head_bin_state", "mc_act": "sigmoid"},
+    {
+        "name": "5b lora_mc",
+        "ckpt": "outputs/lora_mc/lora_mc_best.pt",
+        "mc_key": "head_state",
+        "bin_key": None,
+        "mc_act": "softmax",
+    },
+    {
+        "name": "5d multitask_snr",
+        "ckpt": "outputs/lora_multitask_snr/lora_multitask_snr_best.pt",
+        "mc_key": "head_mc_state",
+        "bin_key": "head_bin_state",
+        "mc_act": "softmax",
+    },
+    {
+        "name": "5e multitask_ml",
+        "ckpt": "outputs/lora_multitask_ml/lora_multitask_ml_best.pt",
+        "mc_key": "head_mc_state",
+        "bin_key": "head_bin_state",
+        "mc_act": "sigmoid",
+    },
 ]
 
 
@@ -91,32 +103,48 @@ class LoRALinear(nn.Module):
         nn.init.zeros_(self.lora_B.weight)
 
     @property
-    def bias(self):   return self.original.bias
+    def bias(self):
+        return self.original.bias
+
     @property
-    def weight(self): return self.original.weight
+    def weight(self):
+        return self.original.weight
 
     def forward(self, x):
-        return self.original(x) + self.lora_B(self.lora_A(self.dropout(x))) * self.scaling
+        return (
+            self.original(x) + self.lora_B(self.lora_A(self.dropout(x))) * self.scaling
+        )
 
 
-def inject_lora(model, rank, alpha, dropout,
-                target_suffixes=("self_attn.q_proj", "self_attn.v_proj")):
+def inject_lora(
+    model,
+    rank,
+    alpha,
+    dropout,
+    target_suffixes=("self_attn.q_proj", "self_attn.v_proj"),
+):
     for name, module in list(model.named_modules()):
-        if not isinstance(module, nn.Linear):                   continue
-        if not any(name.endswith(s) for s in target_suffixes):  continue
+        if not isinstance(module, nn.Linear):
+            continue
+        if not any(name.endswith(s) for s in target_suffixes):
+            continue
         parts = name.split(".")
         parent = model
-        for p in parts[:-1]: parent = getattr(parent, p)
+        for p in parts[:-1]:
+            parent = getattr(parent, p)
         setattr(parent, parts[-1], LoRALinear(module, rank, alpha, dropout))
 
 
 def load_ecgfm(ckpt_path, device):
     from fairseq_signals.utils.checkpoint_utils import load_model_and_task
+
     result = load_model_and_task(ckpt_path)
     if isinstance(result, tuple):
         for r in result:
-            if hasattr(r, "parameters"): return r.to(device)
-            if isinstance(r, list) and r and hasattr(r[0], "parameters"): return r[0].to(device)
+            if hasattr(r, "parameters"):
+                return r.to(device)
+            if isinstance(r, list) and r and hasattr(r[0], "parameters"):
+                return r[0].to(device)
     return result.to(device)
 
 
@@ -130,38 +158,46 @@ class BinaryHead(nn.Module):
     def __init__(self, in_dim=EMBED_DIM):
         super().__init__()
         self.fc = nn.Linear(in_dim, 1)
-    def forward(self, x): return self.fc(x).squeeze(-1)
+
+    def forward(self, x):
+        return self.fc(x).squeeze(-1)
 
 
 class MulticlassHead(nn.Module):
     def __init__(self, in_dim=EMBED_DIM, n_classes=N_CLASSES):
         super().__init__()
         self.fc = nn.Linear(in_dim, n_classes)
-    def forward(self, x): return self.fc(x)
+
+    def forward(self, x):
+        return self.fc(x)
 
 
 # ── 데이터 (cpsc2018_mc_ml: multi-hot) ────────────────────────────────────
 class MCDataset(Dataset):
     def __init__(self, split_dir):
-        self.signals    = np.load(os.path.join(split_dir, "signals.npy"))
-        self.labels_mc  = np.load(os.path.join(split_dir, "labels_mc.npy"))   # (N,5)
+        self.signals = np.load(os.path.join(split_dir, "signals.npy"))
+        self.labels_mc = np.load(os.path.join(split_dir, "labels_mc.npy"))  # (N,5)
         self.labels_bin = np.load(os.path.join(split_dir, "labels_bin.npy"))  # (N,)
-        self.record_ids = np.load(os.path.join(split_dir, "record_ids.npy"),
-                                  allow_pickle=True)
+        self.record_ids = np.load(
+            os.path.join(split_dir, "record_ids.npy"), allow_pickle=True
+        )
 
-    def __len__(self): return len(self.labels_mc)
+    def __len__(self):
+        return len(self.labels_mc)
 
     def __getitem__(self, idx):
-        x  = torch.tensor(self.signals[idx],           dtype=torch.float32)
+        x = torch.tensor(self.signals[idx], dtype=torch.float32)
         yb = torch.tensor(float(self.labels_bin[idx]), dtype=torch.float32)
-        ym = torch.tensor(self.labels_mc[idx],          dtype=torch.float32)
+        ym = torch.tensor(self.labels_mc[idx], dtype=torch.float32)
         return x, yb, ym
 
 
 @torch.no_grad()
 def infer(backbone, head_bin, head_mc, loader, device, mc_act):
-    backbone.eval(); head_mc.eval()
-    if head_bin is not None: head_bin.eval()
+    backbone.eval()
+    head_mc.eval()
+    if head_bin is not None:
+        head_bin.eval()
     bin_l, mc_l, all_yb, all_ym = [], [], [], []
     for x, yb, ym in loader:
         x = x.to(device)
@@ -169,7 +205,8 @@ def infer(backbone, head_bin, head_mc, loader, device, mc_act):
         mc_l.append(head_mc(emb).cpu())
         if head_bin is not None:
             bin_l.append(head_bin(emb).cpu())
-        all_yb.append(yb); all_ym.append(ym)
+        all_yb.append(yb)
+        all_ym.append(ym)
     mc_logits = torch.cat(mc_l).numpy()
     yb = torch.cat(all_yb).numpy().astype(int)
     ym = torch.cat(all_ym).numpy().astype(int)
@@ -216,38 +253,52 @@ def evaluate(bin_probs, yb, mc_probs, ym, mc_th, mask=None):
     if mask is not None:
         sel = mask
         bin_probs = bin_probs[sel] if bin_probs is not None else None
-        yb = yb[sel]; mc_probs = mc_probs[sel]; ym = ym[sel]
+        yb = yb[sel]
+        mc_probs = mc_probs[sel]
+        ym = ym[sel]
     per_auroc, per_f1 = [], []
     for c in range(N_CLASSES):
         yc = ym[:, c]
-        per_auroc.append(roc_auc_score(yc, mc_probs[:, c]) if 0 < yc.sum() < len(yc) else float("nan"))
-        per_f1.append(f1_score(yc, (mc_probs[:, c] >= mc_th[c]).astype(int), zero_division=0))
-    per_auroc = np.array(per_auroc); per_f1 = np.array(per_f1)
-    emerg_score = mc_probs[:, 1] + mc_probs[:, 2]   # 파생 응급점수 (rank용)
+        per_auroc.append(
+            roc_auc_score(yc, mc_probs[:, c])
+            if 0 < yc.sum() < len(yc)
+            else float("nan")
+        )
+        per_f1.append(
+            f1_score(yc, (mc_probs[:, c] >= mc_th[c]).astype(int), zero_division=0)
+        )
+    per_auroc = np.array(per_auroc)
+    per_f1 = np.array(per_f1)
+    emerg_score = mc_probs[:, 1] + mc_probs[:, 2]  # 파생 응급점수 (rank용)
     res = {
-        "per_auroc":   per_auroc,
-        "per_f1":      per_f1,
+        "per_auroc": per_auroc,
+        "per_f1": per_f1,
         "macro_auroc": float(np.nanmean(per_auroc)),
-        "macro_f1":    float(np.mean(per_f1)),
+        "macro_f1": float(np.mean(per_f1)),
         "emerg_auroc": float(np.nanmean(per_auroc[list(EMERGENCY_CLASSES)])),
-        "emerg_f1":    float(np.mean(per_f1[list(EMERGENCY_CLASSES)])),
-        "deriv_bin_auroc": roc_auc_score(yb, emerg_score) if len(np.unique(yb)) >= 2 else float("nan"),
-        "bin_auroc":   float("nan"),
-        "bin_sens":    float("nan"),
+        "emerg_f1": float(np.mean(per_f1[list(EMERGENCY_CLASSES)])),
+        "deriv_bin_auroc": roc_auc_score(yb, emerg_score)
+        if len(np.unique(yb)) >= 2
+        else float("nan"),
+        "bin_auroc": float("nan"),
+        "bin_sens": float("nan"),
     }
     if bin_probs is not None and len(np.unique(yb)) >= 2:
         res["bin_auroc"] = roc_auc_score(yb, bin_probs)
-        res["bin_sens"]  = sens_at_spec(yb, bin_probs, 0.95)
+        res["bin_sens"] = sens_at_spec(yb, bin_probs, 0.95)
     return res
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--data_dir", default=DATA_DIR)
-    ap.add_argument("--old_data_dir",
+    ap.add_argument(
+        "--old_data_dir",
         default="data/processed/cpsc2018_mc",
-        help="5b/5d 학습에 쓰인 구 데이터 — 누수 제거용 (train/val 레코드 제외)")
+        help="5b/5d 학습에 쓰인 구 데이터 — 누수 제거용 (train/val 레코드 제외)",
+    )
     ap.add_argument("--ckpt_path", default=CKPT_FM)
     ap.add_argument("--batch_size", type=int, default=32)
     ap.add_argument("--seed", type=int, default=42)
@@ -261,15 +312,21 @@ def main():
     print("=" * 78)
     print(f"device={device}, seed={args.seed} (cudnn.deterministic=True)")
 
-    val_ds  = MCDataset(os.path.join(args.data_dir, "val"))
+    val_ds = MCDataset(os.path.join(args.data_dir, "val"))
     test_ds = MCDataset(os.path.join(args.data_dir, "test"))
-    val_loader  = DataLoader(val_ds,  batch_size=args.batch_size, shuffle=False, num_workers=0)
-    test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False, num_workers=0)
+    val_loader = DataLoader(
+        val_ds, batch_size=args.batch_size, shuffle=False, num_workers=0
+    )
+    test_loader = DataLoader(
+        test_ds, batch_size=args.batch_size, shuffle=False, num_workers=0
+    )
     print(f"val={len(val_ds)}, test={len(test_ds)}")
     # 테스트셋 클래스 분포
     tm = test_ds.labels_mc
-    print("test multi-hot 양성 수: " +
-          ", ".join(f"{CLASS_NAMES[c]}={int(tm[:, c].sum())}" for c in range(N_CLASSES)))
+    print(
+        "test multi-hot 양성 수: "
+        + ", ".join(f"{CLASS_NAMES[c]}={int(tm[:, c].sum())}" for c in range(N_CLASSES))
+    )
     print(f"test 이진 응급 양성: {int(test_ds.labels_bin.sum())}/{len(test_ds)}")
 
     # 누수 제거 mask: 새 test 중 구 train/val(=5b/5d 학습분)에 없는 레코드만 True
@@ -280,18 +337,27 @@ def main():
             rp = os.path.join(args.old_data_dir, sp, "record_ids.npy")
             if os.path.exists(rp):
                 excl |= set(np.load(rp, allow_pickle=True).tolist())
-        clean_mask = np.array([rid not in excl for rid in test_ds.record_ids], dtype=bool)
+        clean_mask = np.array(
+            [rid not in excl for rid in test_ds.record_ids], dtype=bool
+        )
     n_clean = int(clean_mask.sum())
     tmc = test_ds.labels_mc[clean_mask]
-    print(f"누수제거 clean subset: {n_clean}/{len(test_ds)} "
-          f"(구 train/val 제외 — 세 모델 모두 미학습)")
-    print("  clean 양성 수: " +
-          ", ".join(f"{CLASS_NAMES[c]}={int(tmc[:, c].sum())}" for c in range(N_CLASSES)))
+    print(
+        f"누수제거 clean subset: {n_clean}/{len(test_ds)} "
+        f"(구 train/val 제외 — 세 모델 모두 미학습)"
+    )
+    print(
+        "  clean 양성 수: "
+        + ", ".join(
+            f"{CLASS_NAMES[c]}={int(tmc[:, c].sum())}" for c in range(N_CLASSES)
+        )
+    )
     print()
 
     print("[ECG-FM 백본 로드 + LoRA 주입 (rank=8)]")
     backbone = load_ecgfm(args.ckpt_path, device)
-    for p in backbone.parameters(): p.requires_grad_(False)
+    for p in backbone.parameters():
+        p.requires_grad_(False)
     inject_lora(backbone, rank=8, alpha=16.0, dropout=0.0)
     print()
 
@@ -311,13 +377,21 @@ def main():
             head_bin.load_state_dict(ckpt[spec["bin_key"]])
 
         # val로 임계값 튜닝 → test 적용
-        _, ybv, mpv, ymv = infer(backbone, head_bin, head_mc, val_loader, device, spec["mc_act"])
+        _, ybv, mpv, ymv = infer(
+            backbone, head_bin, head_mc, val_loader, device, spec["mc_act"]
+        )
         mc_th = tune_thresholds(mpv, ymv)
-        bpt, ybt, mpt, ymt = infer(backbone, head_bin, head_mc, test_loader, device, spec["mc_act"])
-        res_full  = evaluate(bpt, ybt, mpt, ymt, mc_th, mask=None)
+        bpt, ybt, mpt, ymt = infer(
+            backbone, head_bin, head_mc, test_loader, device, spec["mc_act"]
+        )
+        res_full = evaluate(bpt, ybt, mpt, ymt, mc_th, mask=None)
         res_clean = evaluate(bpt, ybt, mpt, ymt, mc_th, mask=clean_mask)
-        results[spec["name"]] = {"full": res_full, "clean": res_clean,
-                                 "mc_th": mc_th, "leak": spec["name"].startswith(("5b", "5d"))}
+        results[spec["name"]] = {
+            "full": res_full,
+            "clean": res_clean,
+            "mc_th": mc_th,
+            "leak": spec["name"].startswith(("5b", "5d")),
+        }
         print(f"  [{spec['name']:18s}] 평가 완료 (mc_act={spec['mc_act']})")
 
     names = list(results.keys())
@@ -326,7 +400,8 @@ def main():
         print()
         print("=" * 78)
         print(title)
-        if note: print(note)
+        if note:
+            print(note)
         print("=" * 78)
         print(f"{'클래스':<16}" + "".join(f"{n:>20}" for n in names))
         for c in range(N_CLASSES):
@@ -335,35 +410,54 @@ def main():
                 row += f"{results[n][scope]['per_auroc'][c]:>20.4f}"
             print(row)
         print("-" * 78)
-        for key, label in [("macro_auroc", "macro-AUROC"),
-                           ("emerg_auroc", "응급AUROC(AF·허혈)"),
-                           ("bin_auroc",   "이진헤드AUROC"),
-                           ("deriv_bin_auroc", "파생응급AUROC"),
-                           ("bin_sens",    "이진Sens@95Sp")]:
+        for key, label in [
+            ("macro_auroc", "macro-AUROC"),
+            ("emerg_auroc", "응급AUROC(AF·허혈)"),
+            ("bin_auroc", "이진헤드AUROC"),
+            ("deriv_bin_auroc", "파생응급AUROC"),
+            ("bin_sens", "이진Sens@95Sp"),
+        ]:
             row = f"{label:<16}"
             for n in names:
                 v = results[n][scope][key]
                 row += f"{v:>20.4f}" if v == v else f"{'—':>20}"
             print(row)
 
-    print_block("clean", "★ 공정 비교: per-class AUROC — clean subset (누수 제거, 세 모델 모두 미학습)",
-                "  → 5b/5d/5e 직접 비교는 이 표만 유효")
-    print_block("full", "[참고] full test per-class AUROC",
-                "  ⚠️ 5b/5d는 이 test의 ~75%를 학습함(누수) → 5b/5d 열은 부풀려진 값. 비교 무효.\n"
-                "  ✅ 5e 열만 유효한 공식 수치 (5e는 이 test 미학습).")
+    print_block(
+        "clean",
+        "★ 공정 비교: per-class AUROC — clean subset (누수 제거, 세 모델 모두 미학습)",
+        "  → 5b/5d/5e 직접 비교는 이 표만 유효",
+    )
+    print_block(
+        "full",
+        "[참고] full test per-class AUROC",
+        "  ⚠️ 5b/5d는 이 test의 ~75%를 학습함(누수) → 5b/5d 열은 부풀려진 값. 비교 무효.\n"
+        "  ✅ 5e 열만 유효한 공식 수치 (5e는 이 test 미학습).",
+    )
 
     print()
     print("=" * 78)
     print("[결정성 고정 5e 공식 수치 — full test 1024, 기록용]")
     if "5e multitask_ml" in results:
-        r = results["5e multitask_ml"]["full"]; th = results["5e multitask_ml"]["mc_th"]
-        print(f"  이진헤드 AUROC = {r['bin_auroc']:.4f}, Sens@95Sp = {r['bin_sens']:.4f}")
+        r = results["5e multitask_ml"]["full"]
+        th = results["5e multitask_ml"]["mc_th"]
+        print(
+            f"  이진헤드 AUROC = {r['bin_auroc']:.4f}, Sens@95Sp = {r['bin_sens']:.4f}"
+        )
         print(f"  응급 AUROC(AF·허혈 평균) = {r['emerg_auroc']:.4f}")
         print(f"  macro AUROC = {r['macro_auroc']:.4f}, macro F1 = {r['macro_f1']:.4f}")
-        print("  per-class AUROC: " +
-              ", ".join(f"{CLASS_NAMES[c]}={r['per_auroc'][c]:.4f}" for c in range(N_CLASSES)))
-        print("  per-class F1   : " +
-              ", ".join(f"{CLASS_NAMES[c]}={r['per_f1'][c]:.4f}" for c in range(N_CLASSES)))
+        print(
+            "  per-class AUROC: "
+            + ", ".join(
+                f"{CLASS_NAMES[c]}={r['per_auroc'][c]:.4f}" for c in range(N_CLASSES)
+            )
+        )
+        print(
+            "  per-class F1   : "
+            + ", ".join(
+                f"{CLASS_NAMES[c]}={r['per_f1'][c]:.4f}" for c in range(N_CLASSES)
+            )
+        )
         print("  임계값: " + ", ".join(f"{t:.2f}" for t in th))
     print("=" * 78)
 

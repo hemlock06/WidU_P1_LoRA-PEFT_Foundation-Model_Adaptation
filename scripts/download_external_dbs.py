@@ -28,10 +28,10 @@ DEST_BASE = "data/raw"
 
 DB_CONFIG = {
     "staffiii": {
-        "pn_name": "staffiii",      # wfdb.get_record_list에 쓰는 PhysioNet DB 이름
+        "pn_name": "staffiii",  # wfdb.get_record_list에 쓰는 PhysioNet DB 이름
         "pn_dir": "staffiii/1.0.0",
         "dest": os.path.join(DEST_BASE, "staffiii"),
-        "records_prefix": "data/",   # 레코드가 data/NNN 형태
+        "records_prefix": "data/",  # 레코드가 data/NNN 형태
         "size_note": "3.2 GB",
         "n_records": 520,
     },
@@ -90,6 +90,7 @@ def download_db(db_name: str):
             src_hea = os.path.join(cfg["dest"], "data", os.path.basename(rec) + ".hea")
             if os.path.exists(src_hea):
                 import shutil
+
                 for ext in [".hea", ".dat"]:
                     s = os.path.join(cfg["dest"], "data", os.path.basename(rec) + ext)
                     d = os.path.join(cfg["dest"], os.path.basename(rec) + ext)
@@ -120,12 +121,16 @@ def download_db(db_name: str):
                     keep_subdirs=False,
                 )
                 # data/ 서브디렉토리 이동
-                src = os.path.join(cfg["dest"], "data",
-                                   os.path.basename(rec) + "." + ext)
+                src = os.path.join(
+                    cfg["dest"], "data", os.path.basename(rec) + "." + ext
+                )
                 if os.path.exists(src):
                     import shutil
-                    shutil.move(src, os.path.join(cfg["dest"],
-                                                  os.path.basename(rec) + "." + ext))
+
+                    shutil.move(
+                        src,
+                        os.path.join(cfg["dest"], os.path.basename(rec) + "." + ext),
+                    )
             except Exception:
                 pass
 
@@ -159,8 +164,12 @@ def download_db(db_name: str):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--db", choices=["staffiii", "incart", "ltst", "all"],
-                   default="all", help="다운로드할 DB (기본: all)")
+    p.add_argument(
+        "--db",
+        choices=["staffiii", "incart", "ltst", "all"],
+        default="all",
+        help="다운로드할 DB (기본: all)",
+    )
     args = p.parse_args()
 
     try:

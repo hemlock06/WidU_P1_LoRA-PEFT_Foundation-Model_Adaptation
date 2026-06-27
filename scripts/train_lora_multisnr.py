@@ -38,6 +38,7 @@ except Exception:
     pass
 
 # 공용 빌딩블록은 ②(train_lora.py)에서 그대로 재사용 — 중복·드리프트 방지
+from multisnr import MultiSNRNoise
 from train_lora import (
     CPSCDataset,
     LinearHead,
@@ -48,7 +49,6 @@ from train_lora import (
     load_ecgfm,
     random_lead_mask,
 )
-from multisnr import MultiSNRNoise
 
 
 def train(args):
@@ -61,12 +61,16 @@ def train(args):
     print(f"체크포인트: {args.ckpt_path}")
     print(f"NSTDB:      {args.nstdb_dir}")
     print(f"출력:       {args.out_dir}")
-    print(f"LoRA:       rank={args.lora_rank}, alpha={args.lora_alpha}, "
-          f"dropout={args.lora_dropout}")
+    print(
+        f"LoRA:       rank={args.lora_rank}, alpha={args.lora_alpha}, "
+        f"dropout={args.lora_dropout}"
+    )
     print(f"RLM:        p={args.rlm_p}")
     snr_set = tuple(int(s) for s in args.snr_set.split(","))
-    print(f"multi-SNR:  set={snr_set}dB, p_noise={args.p_noise} "
-          f"({int((1-args.p_noise)*100)}% clean 유지)")
+    print(
+        f"multi-SNR:  set={snr_set}dB, p_noise={args.p_noise} "
+        f"({int((1 - args.p_noise) * 100)}% clean 유지)"
+    )
     print()
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -77,15 +81,30 @@ def train(args):
 
     # ── 데이터 ────────────────────────────────────────────────────────
     train_ds = CPSCDataset(os.path.join(args.data_dir, "train"))
-    val_ds   = CPSCDataset(os.path.join(args.data_dir, "val"))
-    test_ds  = CPSCDataset(os.path.join(args.data_dir, "test"))
+    val_ds = CPSCDataset(os.path.join(args.data_dir, "val"))
+    test_ds = CPSCDataset(os.path.join(args.data_dir, "test"))
 
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size,
-                              shuffle=True,  num_workers=0, pin_memory=True)
-    val_loader   = DataLoader(val_ds,   batch_size=args.batch_size,
-                              shuffle=False, num_workers=0, pin_memory=True)
-    test_loader  = DataLoader(test_ds,  batch_size=args.batch_size,
-                              shuffle=False, num_workers=0, pin_memory=True)
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=0,
+        pin_memory=True,
+    )
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=True,
+    )
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=True,
+    )
 
     n_pos = int((train_ds.labels == 1).sum())
     n_neg = int((train_ds.labels == 0).sum())
@@ -96,14 +115,23 @@ def train(args):
 
     # ── multi-SNR 증강기 (노이즈 pool을 500Hz로 적재) ──────────────────
     print("[증강] NSTDB 노이즈 로드 + 500Hz 리샘플 중...")
-    multisnr = MultiSNRNoise(nstdb_dir=args.nstdb_dir, snr_set=snr_set,
-                             device=device, seed=args.seed,
-                             noise_mode=args.noise_mode)
-    print("       pool 길이: "
-          + ", ".join(f"{t}={multisnr.noise_pool[t].shape[0]:,}"
-                      for t in ("bw", "em", "ma")))
-    print(f"       노이즈 모드: {args.noise_mode} "
-          f"({'리드당 1종' if args.noise_mode=='single' else 'bw·em·ma 가중합성(동시 중첩)'})")
+    multisnr = MultiSNRNoise(
+        nstdb_dir=args.nstdb_dir,
+        snr_set=snr_set,
+        device=device,
+        seed=args.seed,
+        noise_mode=args.noise_mode,
+    )
+    print(
+        "       pool 길이: "
+        + ", ".join(
+            f"{t}={multisnr.noise_pool[t].shape[0]:,}" for t in ("bw", "em", "ma")
+        )
+    )
+    print(
+        f"       노이즈 모드: {args.noise_mode} "
+        f"({'리드당 1종' if args.noise_mode == 'single' else 'bw·em·ma 가중합성(동시 중첩)'})"
+    )
     print()
 
     # ── ECG-FM 로드 + LoRA 주입 ───────────────────────────────────────
@@ -112,11 +140,14 @@ def train(args):
     for p in backbone.parameters():
         p.requires_grad_(False)
 
-    replaced = inject_lora(backbone, rank=args.lora_rank,
-                           alpha=args.lora_alpha, dropout=args.lora_dropout)
+    replaced = inject_lora(
+        backbone, rank=args.lora_rank, alpha=args.lora_alpha, dropout=args.lora_dropout
+    )
     total, trainable = count_trainable(backbone)
-    print(f"       LoRA 주입: {len(replaced)}개 레이어, "
-          f"학습 {trainable:,}개 ({100*trainable/total:.2f}%)")
+    print(
+        f"       LoRA 주입: {len(replaced)}개 레이어, "
+        f"학습 {trainable:,}개 ({100 * trainable / total:.2f}%)"
+    )
 
     head = LinearHead().to(device)
     head_params = sum(p.numel() for p in head.parameters())
@@ -124,19 +155,24 @@ def train(args):
     print()
 
     # ── 옵티마이저 ────────────────────────────────────────────────────
-    trainable_params = ([p for p in backbone.parameters() if p.requires_grad]
-                        + list(head.parameters()))
-    optimizer = torch.optim.AdamW(trainable_params, lr=args.lr,
-                                  weight_decay=args.weight_decay)
+    trainable_params = [p for p in backbone.parameters() if p.requires_grad] + list(
+        head.parameters()
+    )
+    optimizer = torch.optim.AdamW(
+        trainable_params, lr=args.lr, weight_decay=args.weight_decay
+    )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=args.epochs, eta_min=args.lr * 0.1)
+        optimizer, T_max=args.epochs, eta_min=args.lr * 0.1
+    )
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     best_auroc, best_epoch = 0.0, 0
     best_path = os.path.join(args.out_dir, "lora_multisnr_best.pt")
 
-    print(f"{'Epoch':>5} {'TrainLoss':>10} {'ValAUROC':>9} "
-          f"{'ValF1':>7} {'Sens@95Sp':>10} {'LR':>8}")
+    print(
+        f"{'Epoch':>5} {'TrainLoss':>10} {'ValAUROC':>9} "
+        f"{'ValF1':>7} {'Sens@95Sp':>10} {'LR':>8}"
+    )
     print("-" * 55)
 
     for epoch in range(1, args.epochs + 1):
@@ -153,9 +189,9 @@ def train(args):
             if args.rlm_p > 0:
                 x = random_lead_mask(x, p=args.rlm_p)
 
-            emb    = extract_embedding(backbone, x)
+            emb = extract_embedding(backbone, x)
             logits = head(emb)
-            loss   = criterion(logits, y)
+            loss = criterion(logits, y)
 
             optimizer.zero_grad()
             loss.backward()
@@ -169,21 +205,30 @@ def train(args):
         cur_lr = scheduler.get_last_lr()[0]
 
         marker = " ←" if val_auroc > best_auroc else ""
-        print(f"{epoch:5d} {avg_loss:10.4f} {val_auroc:9.4f} {val_f1:7.4f} "
-              f"{val_sens:10.4f} {cur_lr:8.2e}{marker}")
+        print(
+            f"{epoch:5d} {avg_loss:10.4f} {val_auroc:9.4f} {val_f1:7.4f} "
+            f"{val_sens:10.4f} {cur_lr:8.2e}{marker}"
+        )
 
         if val_auroc > best_auroc:
             best_auroc, best_epoch = val_auroc, epoch
-            torch.save({
-                "epoch": epoch,
-                "backbone_lora": {k: v for k, v in backbone.state_dict().items()
-                                  if "lora_" in k},
-                "head_state": head.state_dict(),
-                "val_auroc": val_auroc, "val_f1": val_f1,
-                "lora_rank": args.lora_rank, "lora_alpha": args.lora_alpha,
-                "snr_set": snr_set, "p_noise": args.p_noise,
-                "noise_mode": args.noise_mode,
-            }, best_path)
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "backbone_lora": {
+                        k: v for k, v in backbone.state_dict().items() if "lora_" in k
+                    },
+                    "head_state": head.state_dict(),
+                    "val_auroc": val_auroc,
+                    "val_f1": val_f1,
+                    "lora_rank": args.lora_rank,
+                    "lora_alpha": args.lora_alpha,
+                    "snr_set": snr_set,
+                    "p_noise": args.p_noise,
+                    "noise_mode": args.noise_mode,
+                },
+                best_path,
+            )
 
     # ── 테스트 평가 (clean test set — ②와 동일 조건 비교) ──────────────
     print()
@@ -197,10 +242,8 @@ def train(args):
     print("=" * 65)
     print("단계 6-③ 결과 (clean 테스트 세트)")
     print("=" * 65)
-    print(f"  AUROC              : {test_auroc:.4f}  "
-          f"(① 0.9435 / ② 0.9473)")
-    print(f"  F1 (@threshold 0.5): {test_f1:.4f}  "
-          f"(① 0.9177 / ② 0.9284)")
+    print(f"  AUROC              : {test_auroc:.4f}  (① 0.9435 / ② 0.9473)")
+    print(f"  F1 (@threshold 0.5): {test_f1:.4f}  (① 0.9177 / ② 0.9284)")
     print(f"  Sensitivity@95%Sp  : {test_sens:.4f}  (① 0.7564)")
     print()
     print(f"  모델 저장: {best_path}")
@@ -213,30 +256,37 @@ def train(args):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--data_dir",
-        default="data/processed/cpsc2018")
-    p.add_argument("--ckpt_path",
-        default="checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt")
-    p.add_argument("--nstdb_dir",
-        default="data/raw/nstdb")
-    p.add_argument("--out_dir",
-        default="outputs/lora_multisnr")
-    p.add_argument("--batch_size",   type=int,   default=16)
-    p.add_argument("--epochs",       type=int,   default=30)
-    p.add_argument("--lr",           type=float, default=5e-4)
+    p.add_argument("--data_dir", default="data/processed/cpsc2018")
+    p.add_argument(
+        "--ckpt_path", default="checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+    )
+    p.add_argument("--nstdb_dir", default="data/raw/nstdb")
+    p.add_argument("--out_dir", default="outputs/lora_multisnr")
+    p.add_argument("--batch_size", type=int, default=16)
+    p.add_argument("--epochs", type=int, default=30)
+    p.add_argument("--lr", type=float, default=5e-4)
     p.add_argument("--weight_decay", type=float, default=1e-2)
-    p.add_argument("--lora_rank",    type=int,   default=8)
-    p.add_argument("--lora_alpha",   type=float, default=16.0)
+    p.add_argument("--lora_rank", type=int, default=8)
+    p.add_argument("--lora_alpha", type=float, default=16.0)
     p.add_argument("--lora_dropout", type=float, default=0.1)
-    p.add_argument("--rlm_p",        type=float, default=0.5)
-    p.add_argument("--snr_set",      type=str,   default="24,18,12,6,0",
-                   help="쉼표 구분 SNR 집합 (dB)")
-    p.add_argument("--p_noise",      type=float, default=0.75,
-                   help="샘플당 노이즈 주입 확률 (1-p_noise는 clean 유지)")
-    p.add_argument("--noise_mode",   type=str,   default="single",
-                   choices=["single", "mixed"],
-                   help="single=리드당 1종 / mixed=bw·em·ma 가중합성 동시 중첩")
-    p.add_argument("--seed",         type=int,   default=42)
+    p.add_argument("--rlm_p", type=float, default=0.5)
+    p.add_argument(
+        "--snr_set", type=str, default="24,18,12,6,0", help="쉼표 구분 SNR 집합 (dB)"
+    )
+    p.add_argument(
+        "--p_noise",
+        type=float,
+        default=0.75,
+        help="샘플당 노이즈 주입 확률 (1-p_noise는 clean 유지)",
+    )
+    p.add_argument(
+        "--noise_mode",
+        type=str,
+        default="single",
+        choices=["single", "mixed"],
+        help="single=리드당 1종 / mixed=bw·em·ma 가중합성 동시 중첩",
+    )
+    p.add_argument("--seed", type=int, default=42)
     args = p.parse_args()
     train(args)
 

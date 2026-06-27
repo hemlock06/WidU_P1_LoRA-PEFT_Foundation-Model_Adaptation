@@ -42,27 +42,27 @@ import sys
 import numpy as np
 
 FS_REQUIRED = 500
-N_LEADS     = 12
-N_SAMPLES   = 5000  # 10s × 500Hz
+N_LEADS = 12
+N_SAMPLES = 5000  # 10s × 500Hz
 
 # ── SNOMED-CT 코드 → 클래스 매핑 ─────────────────────────────────────
 # PhysioNet Challenge 2020 cpsc_2018 서브셋 기준
 SNOMED_EMERGENCY = {
-    164889003,   # Atrial fibrillation (AF)
-    429622005,   # ST-segment depression (STD)
-    164931005,   # ST-segment elevation (STE)
+    164889003,  # Atrial fibrillation (AF)
+    429622005,  # ST-segment depression (STD)
+    164931005,  # ST-segment elevation (STE)
 }
 SNOMED_NORMAL = {
-    426783006,   # Normal sinus rhythm
+    426783006,  # Normal sinus rhythm
 }
 SNOMED_EXCLUDE = {
-    270492004,   # First-degree AV block (I-AVB)
-    164909002,   # Left bundle branch block (LBBB)
-    59118001,    # Right bundle branch block (RBBB)
-    284470004,   # Premature atrial contraction (PAC)
-    63593006,    # PAC 대체 코드
-    427172004,   # Premature ventricular contraction (PVC)
-    17338001,    # PVC 대체 코드
+    270492004,  # First-degree AV block (I-AVB)
+    164909002,  # Left bundle branch block (LBBB)
+    59118001,  # Right bundle branch block (RBBB)
+    284470004,  # Premature atrial contraction (PAC)
+    63593006,  # PAC 대체 코드
+    427172004,  # Premature ventricular contraction (PVC)
+    17338001,  # PVC 대체 코드
 }
 
 # 디버그 출력용 이름
@@ -73,11 +73,11 @@ SNOMED_NAMES = {
     426783006: "Normal",
     270492004: "I-AVB",
     164909002: "LBBB",
-    59118001:  "RBBB",
+    59118001: "RBBB",
     284470004: "PAC",
-    63593006:  "PAC(alt)",
+    63593006: "PAC(alt)",
     427172004: "PVC",
-    17338001:  "PVC(alt)",
+    17338001: "PVC(alt)",
 }
 
 
@@ -153,7 +153,9 @@ def load_signal(hea_path: str) -> "np.ndarray | None":
         return None
 
     if record.fs != FS_REQUIRED:
-        print(f"  [경고] {os.path.basename(rec_path)}: fs={record.fs} (기대={FS_REQUIRED}) — 스킵")
+        print(
+            f"  [경고] {os.path.basename(rec_path)}: fs={record.fs} (기대={FS_REQUIRED}) — 스킵"
+        )
         return None
 
     sig = record.p_signal  # (T, n_leads), mV
@@ -189,8 +191,8 @@ def split_records(record_ids, seed=42, train_ratio=0.70, val_ratio=0.15):
     rng.shuffle(ids)
     n = len(ids)
     n_train = int(n * train_ratio)
-    n_val   = int(n * val_ratio)
-    return ids[:n_train], ids[n_train:n_train + n_val], ids[n_train + n_val:]
+    n_val = int(n * val_ratio)
+    return ids[:n_train], ids[n_train : n_train + n_val], ids[n_train + n_val :]
 
 
 def save_split(out_dir: str, split: str, signals, labels, record_ids):
@@ -201,15 +203,17 @@ def save_split(out_dir: str, split: str, signals, labels, record_ids):
     lab_arr = np.array(labels, dtype=np.int8)
     rec_arr = np.array(record_ids, dtype=object)
 
-    np.save(os.path.join(split_dir, "signals.npy"),    sig_arr)
-    np.save(os.path.join(split_dir, "labels.npy"),     lab_arr)
+    np.save(os.path.join(split_dir, "signals.npy"), sig_arr)
+    np.save(os.path.join(split_dir, "labels.npy"), lab_arr)
     np.save(os.path.join(split_dir, "record_ids.npy"), rec_arr)
 
-    n_emg  = int((lab_arr == 1).sum())
+    n_emg = int((lab_arr == 1).sum())
     n_norm = int((lab_arr == 0).sum())
-    print(f"  {split:5s}: {len(lab_arr):4d} records "
-          f"| 응급={n_emg} ({100*n_emg/len(lab_arr):.1f}%) "
-          f"| 정상={n_norm} ({100*n_norm/len(lab_arr):.1f}%)")
+    print(
+        f"  {split:5s}: {len(lab_arr):4d} records "
+        f"| 응급={n_emg} ({100 * n_emg / len(lab_arr):.1f}%) "
+        f"| 정상={n_norm} ({100 * n_norm / len(lab_arr):.1f}%)"
+    )
     print(f"         → {split_dir}")
 
 
@@ -226,8 +230,9 @@ def main():
         help="전처리 결과 저장 폴더",
     )
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--show_unknown", action="store_true",
-                        help="미인식 SNOMED 코드 목록 출력")
+    parser.add_argument(
+        "--show_unknown", action="store_true", help="미인식 SNOMED 코드 목록 출력"
+    )
     args = parser.parse_args()
 
     print("=" * 65)
@@ -247,17 +252,17 @@ def main():
 
     # ── 2. SNOMED-CT 파싱 + 옵션 A 매핑 ──────────────────────────────
     print("[2] .hea '#Dx:' 파싱 → 옵션 A 이진 매핑")
-    label_map   = {}
+    label_map = {}
     unknown_map = {}  # rec_id → 미인식 코드
-    label_dist  = {1: 0, 0: 0, -1: 0}
+    label_dist = {1: 0, 0: 0, -1: 0}
 
     all_known = SNOMED_EMERGENCY | SNOMED_NORMAL | SNOMED_EXCLUDE
 
     for rec_id, hea_path in sorted(records.items()):
         codes = parse_dx_from_hea(hea_path)
-        lbl   = map_label_option_a(codes)
+        lbl = map_label_option_a(codes)
         label_map[rec_id] = lbl
-        label_dist[lbl]  += 1
+        label_dist[lbl] += 1
 
         unknown = codes - all_known
         if unknown:
@@ -271,8 +276,10 @@ def main():
         all_unknown_codes = set()
         for v in unknown_map.values():
             all_unknown_codes |= v
-        print(f"  [참고] 미인식 SNOMED 코드 {len(all_unknown_codes)}종 "
-              f"({len(unknown_map)}개 레코드) — 제외 처리됨")
+        print(
+            f"  [참고] 미인식 SNOMED 코드 {len(all_unknown_codes)}종 "
+            f"({len(unknown_map)}개 레코드) — 제외 처리됨"
+        )
         if args.show_unknown:
             for code in sorted(all_unknown_codes):
                 print(f"    {code}")
@@ -290,9 +297,7 @@ def main():
     print("-" * 65)
 
     skip_total = 0
-    for split_name, ids in [("train", train_ids),
-                             ("val",   val_ids),
-                             ("test",  test_ids)]:
+    for split_name, ids in [("train", train_ids), ("val", val_ids), ("test", test_ids)]:
         signals, labels, rec_ids = [], [], []
         skip_count = 0
 

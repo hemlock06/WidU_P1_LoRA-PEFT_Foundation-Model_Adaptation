@@ -47,23 +47,22 @@ try:
 except ImportError:
     sys.exit("[오류] scipy 미설치 — pip install scipy")
 
-FS_IN       = 1024
-FS_OUT      = 500
-N_LEADS     = 12
-SEG_LEN_IN  = FS_IN  * 10   # 10,240
-SEG_LEN_OUT = FS_OUT * 10   # 5,000
-LEAD_SLOT   = 1              # 단일 채널 → lead II 슬롯
+FS_IN = 1024
+FS_OUT = 500
+N_LEADS = 12
+SEG_LEN_IN = FS_IN * 10  # 10,240
+SEG_LEN_OUT = FS_OUT * 10  # 5,000
+LEAD_SLOT = 1  # 단일 채널 → lead II 슬롯
 
 # CACHET 라벨 → 이진 응급
-LABEL_MAP = {1: 1, 2: 0}    # AF→응급, NSR→정상; 3/4 제외
+LABEL_MAP = {1: 1, 2: 0}  # AF→응급, NSR→정상; 3/4 제외
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--hdf5_path",
-        default="data/raw/cachet/"
-                "cachet-cadb_short_format_without_context.hdf5",
+        default="data/raw/cachet/cachet-cadb_short_format_without_context.hdf5",
     )
     parser.add_argument(
         "--out_dir",
@@ -83,8 +82,8 @@ def main():
     # ── 1. HDF5 로드 ──────────────────────────────────────────────────
     print("[1] HDF5 로드")
     with h5py.File(args.hdf5_path, "r") as f:
-        sig_flat = f["signal"][:]   # (16,404,480,)
-        lbl_flat = f["labels"][:]   # (16,404,480,)
+        sig_flat = f["signal"][:]  # (16,404,480,)
+        lbl_flat = f["labels"][:]  # (16,404,480,)
 
     N_total = len(sig_flat) // SEG_LEN_IN
     sig_flat = sig_flat[: N_total * SEG_LEN_IN]
@@ -97,6 +96,7 @@ def main():
     seg_labels = lbl_segs[:, 0].astype(int)
 
     from collections import Counter
+
     cnt = Counter(seg_labels.tolist())
     lbl_names = {1: "AF", 2: "NSR", 3: "Noise", 4: "Others"}
     print(f"  총 세그먼트: {N_total}")
@@ -136,7 +136,7 @@ def main():
     lab_arr = np.array(labels_out, dtype=np.int8)
 
     np.save(os.path.join(args.out_dir, "signals.npy"), sig_arr)
-    np.save(os.path.join(args.out_dir, "labels.npy"),  lab_arr)
+    np.save(os.path.join(args.out_dir, "labels.npy"), lab_arr)
 
     n_emg = int((lab_arr == 1).sum())
     n_nrm = int((lab_arr == 0).sum())

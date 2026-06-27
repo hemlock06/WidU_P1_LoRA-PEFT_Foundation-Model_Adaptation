@@ -53,10 +53,10 @@ try:
 except ImportError:
     sys.exit("[오류] scipy 미설치 — pip install scipy")
 
-FS_IN       = 257
-FS_OUT      = 500
-N_LEADS     = 12
-SEG_LEN_OUT = FS_OUT * 10   # 5,000
+FS_IN = 257
+FS_OUT = 500
+N_LEADS = 12
+SEG_LEN_OUT = FS_OUT * 10  # 5,000
 
 # 응급 리듬 어노테이션 (aux_note 값)
 EMERGENCY_RHYTHMS = {"(AFIB", "(WPWAF"}
@@ -71,11 +71,7 @@ def is_afib_record(ann_path):
     반환: (bool, list_of_rhythms)
     """
     ann = wfdb.rdann(ann_path, "atr")
-    rhythm_notes = [
-        ann.aux_note[i]
-        for i, s in enumerate(ann.symbol)
-        if s == "+"
-    ]
+    rhythm_notes = [ann.aux_note[i] for i, s in enumerate(ann.symbol) if s == "+"]
     emg_rhythms = [r for r in rhythm_notes if r.strip() in EMERGENCY_RHYTHMS]
     return bool(emg_rhythms), rhythm_notes
 
@@ -103,7 +99,7 @@ def classify_windows(ann, n_windows, fs_ratio):
     result = []
     for w in range(n_windows):
         beats = win_beats[w]
-        if len(beats) < 2:      # 비트가 너무 적음 → 제외
+        if len(beats) < 2:  # 비트가 너무 적음 → 제외
             result.append(-1)
             continue
 
@@ -111,9 +107,9 @@ def classify_windows(ann, n_windows, fs_ratio):
         ratio = n_normal / len(beats)
 
         if ratio >= NORMAL_N_RATIO:
-            result.append(0)    # 정상
+            result.append(0)  # 정상
         else:
-            result.append(-1)   # 혼합/이상 → 제외
+            result.append(-1)  # 혼합/이상 → 제외
 
     return result
 
@@ -134,7 +130,9 @@ def process_record(rec_path, label_override=None):
         return [], []
 
     if rec.fs != FS_IN:
-        print(f"  [경고] {os.path.basename(rec_path)}: fs={rec.fs} (기대={FS_IN}) — 스킵")
+        print(
+            f"  [경고] {os.path.basename(rec_path)}: fs={rec.fs} (기대={FS_IN}) — 스킵"
+        )
         return [], []
 
     sig = rec.p_signal
@@ -166,7 +164,7 @@ def process_record(rec_path, label_override=None):
         lbl = win_labels[w]
         if lbl < 0:
             continue
-        seg = sig_rs[:, w * SEG_LEN_OUT: (w + 1) * SEG_LEN_OUT]
+        seg = sig_rs[:, w * SEG_LEN_OUT : (w + 1) * SEG_LEN_OUT]
         windows_out.append(seg)
         labels_out.append(lbl)
 
@@ -196,10 +194,12 @@ def main():
 
     # ── 1. 레코드 분류 ────────────────────────────────────────────────
     print("[1] 레코드 분류 (AFIB 유무)")
-    atr_files = sorted([f[:-4] for f in os.listdir(args.data_dir) if f.endswith(".atr")])
+    atr_files = sorted(
+        [f[:-4] for f in os.listdir(args.data_dir) if f.endswith(".atr")]
+    )
 
-    afib_recs   = []   # 전 윈도우 → 응급
-    normal_recs = []   # N 지배 윈도우 → 정상
+    afib_recs = []  # 전 윈도우 → 응급
+    normal_recs = []  # N 지배 윈도우 → 정상
 
     for rec_name in atr_files:
         ann_path = os.path.join(args.data_dir, rec_name)
@@ -207,7 +207,7 @@ def main():
         if is_afib:
             afib_recs.append(rec_name)
             print(f"  AFIB: {rec_name}  rhythms={rhythms}")
-        elif not rhythms:   # 리듬 어노테이션 없는 레코드 = 정상 후보
+        elif not rhythms:  # 리듬 어노테이션 없는 레코드 = 정상 후보
             normal_recs.append(rec_name)
 
     # PREX/기타 리듬 레코드는 자동 제외됨 (위 elif 조건)
@@ -249,8 +249,8 @@ def main():
     lab_arr = np.array(all_labels, dtype=np.int8)
     rid_arr = np.array(all_rec_ids, dtype=object)
 
-    np.save(os.path.join(args.out_dir, "signals.npy"),    sig_arr)
-    np.save(os.path.join(args.out_dir, "labels.npy"),     lab_arr)
+    np.save(os.path.join(args.out_dir, "signals.npy"), sig_arr)
+    np.save(os.path.join(args.out_dir, "labels.npy"), lab_arr)
     np.save(os.path.join(args.out_dir, "record_ids.npy"), rid_arr)
 
     n_emg = int((lab_arr == 1).sum())

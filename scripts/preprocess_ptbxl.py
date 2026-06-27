@@ -46,15 +46,15 @@ except ImportError as e:
     sys.exit(f"[오류] {e} — pip install pandas wfdb")
 
 FS_REQUIRED = 500
-N_LEADS     = 12
-N_SAMPLES   = 5000  # 10s × 500Hz
-SEED        = 42
+N_LEADS = 12
+N_SAMPLES = 5000  # 10s × 500Hz
+SEED = 42
 
 # PTB-XL 12-lead 순서: I II III aVR aVL aVF V1 V2 V3 V4 V5 V6
 # wfdb 로드 시 이 순서 그대로 나옴 — 재배치 불필요
 
-DATA_DEFAULT  = "data/raw/ptbxl"
-OUT_DEFAULT   = "data/processed/ptbxl"
+DATA_DEFAULT = "data/raw/ptbxl"
+OUT_DEFAULT = "data/processed/ptbxl"
 
 
 def parse_superclass(scp_str):
@@ -87,9 +87,9 @@ def map_label(scp_codes, scp_df):
                 super_classes.add(sc)
 
     if "MI" in super_classes or "STTC" in super_classes:
-        return 1   # 응급
+        return 1  # 응급
     elif "NORM" in super_classes and len(super_classes) == 1:
-        return 0   # 순수 정상만
+        return 0  # 순수 정상만
     elif "NORM" in super_classes:
         # NORM + 다른 진단 → 제외 (혼재)
         return -1
@@ -105,7 +105,7 @@ def load_record(rec_path, data_dir):
     except Exception as e:
         return None, f"읽기 실패: {e}"
 
-    sig = record.p_signal   # (T, n_leads) float64
+    sig = record.p_signal  # (T, n_leads) float64
     if sig is None:
         return None, "신호 없음"
 
@@ -137,16 +137,16 @@ def patient_split(df, seed=SEED):
     patients = df["patient_id"].unique()
     rng.shuffle(patients)
     n = len(patients)
-    n_val  = int(n * 0.15)
+    n_val = int(n * 0.15)
     n_test = int(n * 0.15)
-    val_p   = set(patients[:n_val])
-    test_p  = set(patients[n_val:n_val + n_test])
-    train_p = set(patients[n_val + n_test:])
+    val_p = set(patients[:n_val])
+    test_p = set(patients[n_val : n_val + n_test])
+    train_p = set(patients[n_val + n_test :])
 
     splits = {}
     splits["train"] = df[df["patient_id"].isin(train_p)]
-    splits["val"]   = df[df["patient_id"].isin(val_p)]
-    splits["test"]  = df[df["patient_id"].isin(test_p)]
+    splits["val"] = df[df["patient_id"].isin(val_p)]
+    splits["test"] = df[df["patient_id"].isin(test_p)]
     return splits
 
 
@@ -179,7 +179,7 @@ def process_split(split_df, data_dir, out_dir, split_name, scp_df):
 
     sig_arr = np.stack(signals, axis=0).astype(np.float32)
     lbl_arr = np.array(labels, dtype=np.int8)
-    id_arr  = np.array(rec_ids)
+    id_arr = np.array(rec_ids)
 
     split_out = os.path.join(out_dir, split_name)
     os.makedirs(split_out, exist_ok=True)
@@ -189,15 +189,20 @@ def process_split(split_df, data_dir, out_dir, split_name, scp_df):
 
     n_pos = int((lbl_arr == 1).sum())
     n_neg = int((lbl_arr == 0).sum())
-    print(f"  [{split_name}] 총 {len(sig_arr)}  응급(MI/STTC)={n_pos}  정상(NORM)={n_neg}")
-    print(f"           제외(CD/HYP/혼재)={skip['label_exc']}  읽기 실패={skip['read_err']}")
+    print(
+        f"  [{split_name}] 총 {len(sig_arr)}  응급(MI/STTC)={n_pos}  정상(NORM)={n_neg}"
+    )
+    print(
+        f"           제외(CD/HYP/혼재)={skip['label_exc']}  읽기 실패={skip['read_err']}"
+    )
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--data_dir", default=DATA_DEFAULT)
-    parser.add_argument("--out_dir",  default=OUT_DEFAULT)
+    parser.add_argument("--out_dir", default=OUT_DEFAULT)
     args = parser.parse_args()
 
     print("=" * 65)
@@ -215,8 +220,8 @@ def main():
     if not os.path.exists(scp_csv):
         sys.exit(f"[오류] {scp_csv} 없음")
 
-    df  = pd.read_csv(db_csv, index_col="ecg_id")
-    df  = df.reset_index()   # ecg_id 컬럼으로
+    df = pd.read_csv(db_csv, index_col="ecg_id")
+    df = df.reset_index()  # ecg_id 컬럼으로
     scp = pd.read_csv(scp_csv, index_col=0)
 
     print(f"PTB-XL 총 레코드: {len(df):,}건")

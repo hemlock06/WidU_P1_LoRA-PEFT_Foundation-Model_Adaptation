@@ -33,15 +33,15 @@ Warm start (기본):
 import argparse
 import math
 import os
+import os as _os
 import sys
+import sys as _sys
 
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 
-import sys as _sys
-import os as _os
 _sys.path.insert(0, _os.path.dirname(__file__))
 from multisnr import MultiSNRNoise
 
@@ -51,7 +51,7 @@ except Exception:
     pass
 
 try:
-    from sklearn.metrics import roc_auc_score, f1_score, roc_curve
+    from sklearn.metrics import f1_score, roc_auc_score, roc_curve
 except ImportError:
     sys.exit("[오류] scikit-learn 미설치")
 
@@ -66,10 +66,10 @@ CLASS_NAMES = [
 ]
 EMERGENCY_CLASSES = (1, 2)  # AF + 급성허혈
 
-CKPT_FM   = "checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
-DATA_DIR  = "data/processed/cpsc2018_mc_ml"
+CKPT_FM = "checkpoints/ecg-fm/mimic_iv_ecg_physionet_pretrained.pt"
+DATA_DIR = "data/processed/cpsc2018_mc_ml"
 NSTDB_DIR = "data/raw/nstdb"
-OUT_DIR   = "outputs/lora_multitask_ml"
+OUT_DIR = "outputs/lora_multitask_ml"
 WARM_CKPT = "outputs/lora_multitask_snr/lora_multitask_snr_best.pt"
 
 
@@ -90,23 +90,36 @@ class LoRALinear(nn.Module):
         nn.init.zeros_(self.lora_B.weight)
 
     @property
-    def bias(self):   return self.original.bias
+    def bias(self):
+        return self.original.bias
+
     @property
-    def weight(self): return self.original.weight
+    def weight(self):
+        return self.original.weight
 
     def forward(self, x):
-        return self.original(x) + self.lora_B(self.lora_A(self.dropout(x))) * self.scaling
+        return (
+            self.original(x) + self.lora_B(self.lora_A(self.dropout(x))) * self.scaling
+        )
 
 
-def inject_lora(model, rank, alpha, dropout,
-                target_suffixes=("self_attn.q_proj", "self_attn.v_proj")):
+def inject_lora(
+    model,
+    rank,
+    alpha,
+    dropout,
+    target_suffixes=("self_attn.q_proj", "self_attn.v_proj"),
+):
     replaced = []
     for name, module in list(model.named_modules()):
-        if not isinstance(module, nn.Linear):           continue
-        if not any(name.endswith(s) for s in target_suffixes): continue
+        if not isinstance(module, nn.Linear):
+            continue
+        if not any(name.endswith(s) for s in target_suffixes):
+            continue
         parts = name.split(".")
         parent = model
-        for p in parts[:-1]: parent = getattr(parent, p)
+        for p in parts[:-1]:
+            parent = getattr(parent, p)
         setattr(parent, parts[-1], LoRALinear(module, rank, alpha, dropout))
         replaced.append(name)
     return replaced
@@ -115,16 +128,17 @@ def inject_lora(model, rank, alpha, dropout,
 # ── 데이터셋: 이진 + multi-hot 라벨 동시 반환 ─────────────────────────────
 class CPSCMultiLabelDataset(Dataset):
     def __init__(self, split_dir: str):
-        self.signals    = np.load(os.path.join(split_dir, "signals.npy"))
-        self.labels_mc  = np.load(os.path.join(split_dir, "labels_mc.npy"))   # (N,5)
+        self.signals = np.load(os.path.join(split_dir, "signals.npy"))
+        self.labels_mc = np.load(os.path.join(split_dir, "labels_mc.npy"))  # (N,5)
         self.labels_bin = np.load(os.path.join(split_dir, "labels_bin.npy"))  # (N,)
 
-    def __len__(self): return len(self.labels_mc)
+    def __len__(self):
+        return len(self.labels_mc)
 
     def __getitem__(self, idx):
-        x  = torch.tensor(self.signals[idx],          dtype=torch.float32)
+        x = torch.tensor(self.signals[idx], dtype=torch.float32)
         yb = torch.tensor(float(self.labels_bin[idx]), dtype=torch.float32)
-        ym = torch.tensor(self.labels_mc[idx],          dtype=torch.float32)  # (5,) 멀티핫
+        ym = torch.tensor(self.labels_mc[idx], dtype=torch.float32)  # (5,) 멀티핫
         return x, yb, ym
 
 
@@ -137,11 +151,14 @@ def random_lead_mask(x, p=0.5):
 # ── ECG-FM 로드 ──────────────────────────────────────────────────────────
 def load_ecgfm(ckpt_path, device):
     from fairseq_signals.utils.checkpoint_utils import load_model_and_task
+
     result = load_model_and_task(ckpt_path)
     if isinstance(result, tuple):
         for r in result:
-            if hasattr(r, "parameters"): return r.to(device)
-            if isinstance(r, list) and r and hasattr(r[0], "parameters"): return r[0].to(device)
+            if hasattr(r, "parameters"):
+                return r.to(device)
+            if isinstance(r, list) and r and hasattr(r[0], "parameters"):
+                return r[0].to(device)
     return result.to(device)
 
 
@@ -155,33 +172,40 @@ class BinaryHead(nn.Module):
     def __init__(self, in_dim=EMBED_DIM):
         super().__init__()
         self.fc = nn.Linear(in_dim, 1)
-    def forward(self, x): return self.fc(x).squeeze(-1)
+
+    def forward(self, x):
+        return self.fc(x).squeeze(-1)
 
 
 class MulticlassHead(nn.Module):
     def __init__(self, in_dim=EMBED_DIM, n_classes=N_CLASSES):
         super().__init__()
         self.fc = nn.Linear(in_dim, n_classes)
-    def forward(self, x): return self.fc(x)   # logits — sigmoid는 손실/평가에서
+
+    def forward(self, x):
+        return self.fc(x)  # logits — sigmoid는 손실/평가에서
 
 
 # ── 평가 ─────────────────────────────────────────────────────────────────
 @torch.no_grad()
 def infer(backbone, head_bin, head_mc, loader, device):
-    backbone.eval(); head_bin.eval(); head_mc.eval()
+    backbone.eval()
+    head_bin.eval()
+    head_mc.eval()
     all_bin, all_mc, all_yb, all_ym = [], [], [], []
     for x, yb, ym in loader:
         x = x.to(device)
         emb = extract_embedding(backbone, x)
         all_bin.append(head_bin(emb).cpu())
         all_mc.append(head_mc(emb).cpu())
-        all_yb.append(yb); all_ym.append(ym)
+        all_yb.append(yb)
+        all_ym.append(ym)
     bin_logits = torch.cat(all_bin).numpy()
-    mc_logits  = torch.cat(all_mc).numpy()
+    mc_logits = torch.cat(all_mc).numpy()
     yb = torch.cat(all_yb).numpy().astype(int)
-    ym = torch.cat(all_ym).numpy().astype(int)        # (N,5)
+    ym = torch.cat(all_ym).numpy().astype(int)  # (N,5)
     bin_probs = 1 / (1 + np.exp(-bin_logits))
-    mc_probs  = 1 / (1 + np.exp(-mc_logits))           # 독립 sigmoid (multi-label)
+    mc_probs = 1 / (1 + np.exp(-mc_logits))  # 독립 sigmoid (multi-label)
     return bin_probs, yb, mc_probs, ym
 
 
@@ -207,10 +231,10 @@ def compute_metrics(bin_probs, yb, mc_probs, ym, mc_thresholds=None):
     # 이진
     if len(np.unique(yb)) >= 2:
         bin_auroc = roc_auc_score(yb, bin_probs)
-        bin_f1    = f1_score(yb, (bin_probs >= 0.5).astype(int), zero_division=0)
+        bin_f1 = f1_score(yb, (bin_probs >= 0.5).astype(int), zero_division=0)
         fpr, tpr, _ = roc_curve(yb, bin_probs)
         spec = 1 - fpr
-        idx  = np.searchsorted(spec[::-1], 0.95)
+        idx = np.searchsorted(spec[::-1], 0.95)
         bin_sens = float(tpr[::-1][idx]) if idx < len(tpr) else float("nan")
     else:
         bin_auroc = bin_f1 = bin_sens = float("nan")
@@ -225,19 +249,28 @@ def compute_metrics(bin_probs, yb, mc_probs, ym, mc_thresholds=None):
             per_auroc.append(roc_auc_score(yc, mc_probs[:, c]))
         else:
             per_auroc.append(float("nan"))
-        per_f1.append(f1_score(yc, (mc_probs[:, c] >= mc_thresholds[c]).astype(int),
-                               zero_division=0))
-    per_auroc = np.array(per_auroc); per_f1 = np.array(per_f1)
+        per_f1.append(
+            f1_score(
+                yc, (mc_probs[:, c] >= mc_thresholds[c]).astype(int), zero_division=0
+            )
+        )
+    per_auroc = np.array(per_auroc)
+    per_f1 = np.array(per_f1)
     macro_auroc = np.nanmean(per_auroc)
-    macro_f1    = float(np.mean(per_f1))
+    macro_f1 = float(np.mean(per_f1))
     # 응급 관련 (AF=1, 허혈=2)
     emerg_auroc = float(np.nanmean(per_auroc[list(EMERGENCY_CLASSES)]))
-    emerg_f1    = float(np.mean(per_f1[list(EMERGENCY_CLASSES)]))
+    emerg_f1 = float(np.mean(per_f1[list(EMERGENCY_CLASSES)]))
     return {
-        "bin_auroc": bin_auroc, "bin_f1": bin_f1, "bin_sens": bin_sens,
-        "per_auroc": per_auroc, "per_f1": per_f1,
-        "macro_auroc": macro_auroc, "macro_f1": macro_f1,
-        "emerg_auroc": emerg_auroc, "emerg_f1": emerg_f1,
+        "bin_auroc": bin_auroc,
+        "bin_f1": bin_f1,
+        "bin_sens": bin_sens,
+        "per_auroc": per_auroc,
+        "per_f1": per_f1,
+        "macro_auroc": macro_auroc,
+        "macro_f1": macro_f1,
+        "emerg_auroc": emerg_auroc,
+        "emerg_f1": emerg_f1,
         "mc_thresholds": mc_thresholds,
     }
 
@@ -251,7 +284,9 @@ def train(args):
     print(f"디바이스:   {device}")
     print(f"데이터:     {args.data_dir}")
     print(f"warm start: {args.warm_ckpt if args.warm_ckpt else '없음 (cold start)'}")
-    print(f"alpha (BCE 비중): {args.alpha}  →  loss = {args.alpha}·BCE_bin + {1-args.alpha:.2f}·BCE_mc")
+    print(
+        f"alpha (BCE 비중): {args.alpha}  →  loss = {args.alpha}·BCE_bin + {1 - args.alpha:.2f}·BCE_mc"
+    )
     print(f"LR={args.lr}, epochs={args.epochs}, batch={args.batch_size}")
     snr_set = tuple(int(s) for s in args.snr_set.split(","))
     print(f"multi-SNR:  {snr_set}dB, p_noise={args.p_noise}")
@@ -260,22 +295,38 @@ def train(args):
     os.makedirs(args.out_dir, exist_ok=True)
 
     train_ds = CPSCMultiLabelDataset(os.path.join(args.data_dir, "train"))
-    val_ds   = CPSCMultiLabelDataset(os.path.join(args.data_dir, "val"))
-    test_ds  = CPSCMultiLabelDataset(os.path.join(args.data_dir, "test"))
+    val_ds = CPSCMultiLabelDataset(os.path.join(args.data_dir, "val"))
+    test_ds = CPSCMultiLabelDataset(os.path.join(args.data_dir, "test"))
 
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size,
-                              shuffle=True, num_workers=0, pin_memory=True)
-    val_loader   = DataLoader(val_ds,   batch_size=args.batch_size,
-                              shuffle=False, num_workers=0, pin_memory=True)
-    test_loader  = DataLoader(test_ds,  batch_size=args.batch_size,
-                              shuffle=False, num_workers=0, pin_memory=True)
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=0,
+        pin_memory=True,
+    )
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=True,
+    )
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=True,
+    )
 
     # multi-label 클래스별 pos_weight (역빈도)
-    mc = train_ds.labels_mc.astype(np.float64)        # (N,5)
+    mc = train_ds.labels_mc.astype(np.float64)  # (N,5)
     n_pos_c = mc.sum(axis=0)
     n_neg_c = len(mc) - n_pos_c
-    mc_pos_weight = torch.tensor(n_neg_c / np.maximum(n_pos_c, 1),
-                                 dtype=torch.float32).to(device)
+    mc_pos_weight = torch.tensor(
+        n_neg_c / np.maximum(n_pos_c, 1), dtype=torch.float32
+    ).to(device)
 
     # 이진 pos_weight
     n_pos = (train_ds.labels_bin == 1).sum()
@@ -283,23 +334,31 @@ def train(args):
     pos_weight = torch.tensor(n_neg / max(n_pos, 1), dtype=torch.float32).to(device)
 
     print(f"[데이터] train={len(train_ds)}, val={len(val_ds)}, test={len(test_ds)}")
-    print(f"         이진 응급={int(n_pos)}, 정상={int(n_neg)}, pos_weight={pos_weight.item():.3f}")
+    print(
+        f"         이진 응급={int(n_pos)}, 정상={int(n_neg)}, pos_weight={pos_weight.item():.3f}"
+    )
     print("[multi-label 클래스별 pos_weight]")
     for c in range(N_CLASSES):
-        print(f"  [{c}] {CLASS_NAMES[c]:30s} n_pos={int(n_pos_c[c]):4d}  pos_w={mc_pos_weight[c].item():.3f}")
+        print(
+            f"  [{c}] {CLASS_NAMES[c]:30s} n_pos={int(n_pos_c[c]):4d}  pos_w={mc_pos_weight[c].item():.3f}"
+        )
     print()
 
     print("[모델] ECG-FM 백본 로드 중...")
     backbone = load_ecgfm(args.ckpt_path, device)
     backbone.train()
-    for p in backbone.parameters(): p.requires_grad_(False)
-    replaced = inject_lora(backbone, rank=args.lora_rank, alpha=args.lora_alpha,
-                           dropout=args.lora_dropout)
-    print(f"       LoRA 주입: {len(replaced)} 레이어, "
-          f"학습 파라미터 {sum(p.numel() for p in backbone.parameters() if p.requires_grad):,}")
+    for p in backbone.parameters():
+        p.requires_grad_(False)
+    replaced = inject_lora(
+        backbone, rank=args.lora_rank, alpha=args.lora_alpha, dropout=args.lora_dropout
+    )
+    print(
+        f"       LoRA 주입: {len(replaced)} 레이어, "
+        f"학습 파라미터 {sum(p.numel() for p in backbone.parameters() if p.requires_grad):,}"
+    )
 
     head_bin = BinaryHead().to(device)
-    head_mc  = MulticlassHead().to(device)
+    head_mc = MulticlassHead().to(device)
     print("       BinaryHead(768→1) + MulticlassHead(768→5, sigmoid) 추가")
 
     if args.warm_ckpt and os.path.exists(args.warm_ckpt):
@@ -320,45 +379,59 @@ def train(args):
         print("[Cold start] 모든 LoRA + head 랜덤 초기화")
     print()
 
-    params = ([p for p in backbone.parameters() if p.requires_grad]
-              + list(head_bin.parameters()) + list(head_mc.parameters()))
+    params = (
+        [p for p in backbone.parameters() if p.requires_grad]
+        + list(head_bin.parameters())
+        + list(head_mc.parameters())
+    )
     optimizer = torch.optim.AdamW(params, lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=args.epochs, eta_min=args.lr * 0.1)
+        optimizer, T_max=args.epochs, eta_min=args.lr * 0.1
+    )
     bce_bin = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-    bce_mc  = nn.BCEWithLogitsLoss(pos_weight=mc_pos_weight)   # multi-label
+    bce_mc = nn.BCEWithLogitsLoss(pos_weight=mc_pos_weight)  # multi-label
 
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     print("[증강] NSTDB 노이즈 로드 + 500Hz 리샘플 중...")
-    multisnr = MultiSNRNoise(nstdb_dir=args.nstdb_dir, snr_set=snr_set,
-                             device=device, seed=args.seed)
-    print("       pool 길이: "
-          + ", ".join(f"{t}={multisnr.noise_pool[t].shape[0]:,}"
-                      for t in ("bw", "em", "ma")))
+    multisnr = MultiSNRNoise(
+        nstdb_dir=args.nstdb_dir, snr_set=snr_set, device=device, seed=args.seed
+    )
+    print(
+        "       pool 길이: "
+        + ", ".join(
+            f"{t}={multisnr.noise_pool[t].shape[0]:,}" for t in ("bw", "em", "ma")
+        )
+    )
     print()
 
     best_composite = 0.0
-    best_epoch     = 0
-    best_path      = os.path.join(args.out_dir, "lora_multitask_ml_best.pt")
+    best_epoch = 0
+    best_path = os.path.join(args.out_dir, "lora_multitask_ml_best.pt")
 
-    print(f"{'Ep':>3} {'Loss':>8} {'BCEb':>6} {'BCEm':>6}  "
-          f"{'BinAUROC':>9} {'MacAUROC':>9} {'Compose':>8}")
+    print(
+        f"{'Ep':>3} {'Loss':>8} {'BCEb':>6} {'BCEm':>6}  "
+        f"{'BinAUROC':>9} {'MacAUROC':>9} {'Compose':>8}"
+    )
     print("-" * 62)
 
     for epoch in range(1, args.epochs + 1):
-        backbone.train(); head_bin.train(); head_mc.train()
+        backbone.train()
+        head_bin.train()
+        head_mc.train()
         tot, tot_b, tot_c, n = 0.0, 0.0, 0.0, 0
 
         for x, yb, ym in train_loader:
-            x  = x.to(device); yb = yb.to(device); ym = ym.to(device)
+            x = x.to(device)
+            yb = yb.to(device)
+            ym = ym.to(device)
             x = multisnr.inject(x, p_noise=args.p_noise)
             if args.rlm_p > 0:
                 x = random_lead_mask(x, p=args.rlm_p)
 
-            emb        = extract_embedding(backbone, x)
+            emb = extract_embedding(backbone, x)
             bin_logits = head_bin(emb)
-            mc_logits  = head_mc(emb)
+            mc_logits = head_mc(emb)
             lb = bce_bin(bin_logits, yb)
             lc = bce_mc(mc_logits, ym)
             loss = args.alpha * lb + (1 - args.alpha) * lc
@@ -369,7 +442,10 @@ def train(args):
             optimizer.step()
 
             bs = x.size(0)
-            tot += loss.item()*bs; tot_b += lb.item()*bs; tot_c += lc.item()*bs; n += bs
+            tot += loss.item() * bs
+            tot_b += lb.item() * bs
+            tot_c += lc.item() * bs
+            n += bs
 
         scheduler.step()
         bp, yb_v, mp, ym_v = infer(backbone, head_bin, head_mc, val_loader, device)
@@ -377,29 +453,34 @@ def train(args):
         composite = (m["bin_auroc"] + m["macro_auroc"]) / 2
 
         marker = " ←" if composite > best_composite else ""
-        print(f"{epoch:3d} {tot/n:8.4f} {tot_b/n:6.4f} {tot_c/n:6.4f}  "
-              f"{m['bin_auroc']:9.4f} {m['macro_auroc']:9.4f} {composite:8.4f}{marker}",
-              flush=True)
+        print(
+            f"{epoch:3d} {tot / n:8.4f} {tot_b / n:6.4f} {tot_c / n:6.4f}  "
+            f"{m['bin_auroc']:9.4f} {m['macro_auroc']:9.4f} {composite:8.4f}{marker}",
+            flush=True,
+        )
 
         if composite > best_composite:
             best_composite = composite
-            best_epoch     = epoch
-            torch.save({
-                "epoch":             epoch,
-                "backbone_lora":     backbone.state_dict(),
-                "head_bin_state":    head_bin.state_dict(),
-                "head_mc_state":     head_mc.state_dict(),
-                "val_bin_auroc":     m["bin_auroc"],
-                "val_macro_auroc":   m["macro_auroc"],
-                "val_composite":     composite,
-                "alpha":             args.alpha,
-                "lora_rank":         args.lora_rank,
-                "lora_alpha":        args.lora_alpha,
-                "n_classes":         N_CLASSES,
-                "class_names":       CLASS_NAMES,
-                "emergency_classes": EMERGENCY_CLASSES,
-                "multilabel":        True,
-            }, best_path)
+            best_epoch = epoch
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "backbone_lora": backbone.state_dict(),
+                    "head_bin_state": head_bin.state_dict(),
+                    "head_mc_state": head_mc.state_dict(),
+                    "val_bin_auroc": m["bin_auroc"],
+                    "val_macro_auroc": m["macro_auroc"],
+                    "val_composite": composite,
+                    "alpha": args.alpha,
+                    "lora_rank": args.lora_rank,
+                    "lora_alpha": args.lora_alpha,
+                    "n_classes": N_CLASSES,
+                    "class_names": CLASS_NAMES,
+                    "emergency_classes": EMERGENCY_CLASSES,
+                    "multilabel": True,
+                },
+                best_path,
+            )
 
     # ── 테스트 ────────────────────────────────────────────────────────────
     print()
@@ -432,8 +513,10 @@ def train(args):
     print("  [multi-label 5-class — per class]")
     print(f"    {'class':<28}{'AUROC':>8}{'F1':>8}{'thr':>7}")
     for c in range(N_CLASSES):
-        print(f"    {CLASS_NAMES[c]:<28}{res['per_auroc'][c]:>8.4f}"
-              f"{res['per_f1'][c]:>8.4f}{mc_th[c]:>7.2f}")
+        print(
+            f"    {CLASS_NAMES[c]:<28}{res['per_auroc'][c]:>8.4f}"
+            f"{res['per_f1'][c]:>8.4f}{mc_th[c]:>7.2f}"
+        )
     print(f"    {'─ macro':<28}{res['macro_auroc']:>8.4f}{res['macro_f1']:>8.4f}")
     print()
     print("  [비교 기준 (구 단일라벨 5b/5d, 테스트셋 상이 — 근사)]")
@@ -443,39 +526,60 @@ def train(args):
     print(f"  체크포인트: {best_path}")
     print("=" * 70)
 
-    np.savez(os.path.join(args.out_dir, "test_results.npz"),
-             bin_labels=ybt, bin_probs=bp_t,
-             mc_labels=ymt, mc_probs=mp_t, mc_thresholds=mc_th,
-             bin_auroc=res["bin_auroc"], bin_f1=res["bin_f1"], bin_sens=res["bin_sens"],
-             per_auroc=res["per_auroc"], per_f1=res["per_f1"],
-             macro_auroc=res["macro_auroc"], macro_f1=res["macro_f1"],
-             emerg_auroc=res["emerg_auroc"], emerg_f1=res["emerg_f1"])
+    np.savez(
+        os.path.join(args.out_dir, "test_results.npz"),
+        bin_labels=ybt,
+        bin_probs=bp_t,
+        mc_labels=ymt,
+        mc_probs=mp_t,
+        mc_thresholds=mc_th,
+        bin_auroc=res["bin_auroc"],
+        bin_f1=res["bin_f1"],
+        bin_sens=res["bin_sens"],
+        per_auroc=res["per_auroc"],
+        per_f1=res["per_f1"],
+        macro_auroc=res["macro_auroc"],
+        macro_f1=res["macro_f1"],
+        emerg_auroc=res["emerg_auroc"],
+        emerg_f1=res["emerg_f1"],
+    )
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--data_dir",   default=DATA_DIR)
-    parser.add_argument("--ckpt_path",  default=CKPT_FM)
-    parser.add_argument("--out_dir",    default=OUT_DIR)
-    parser.add_argument("--warm_ckpt",  default=WARM_CKPT,
-                        help="warm start 체크포인트 (빈 문자열이면 cold start)")
-    parser.add_argument("--fresh_mc_head", action="store_true",
-                        help="head_mc를 warm에서 로드하지 않고 신규 초기화")
-    parser.add_argument("--alpha",      type=float, default=0.5,
-                        help="BCE_bin 비중 (0=다중만, 1=이진만, 0.5=균등)")
-    parser.add_argument("--batch_size", type=int,   default=16)
-    parser.add_argument("--epochs",     type=int,   default=30)
-    parser.add_argument("--lr",         type=float, default=1e-4)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--data_dir", default=DATA_DIR)
+    parser.add_argument("--ckpt_path", default=CKPT_FM)
+    parser.add_argument("--out_dir", default=OUT_DIR)
+    parser.add_argument(
+        "--warm_ckpt",
+        default=WARM_CKPT,
+        help="warm start 체크포인트 (빈 문자열이면 cold start)",
+    )
+    parser.add_argument(
+        "--fresh_mc_head",
+        action="store_true",
+        help="head_mc를 warm에서 로드하지 않고 신규 초기화",
+    )
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=0.5,
+        help="BCE_bin 비중 (0=다중만, 1=이진만, 0.5=균등)",
+    )
+    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--weight_decay", type=float, default=1e-2)
-    parser.add_argument("--lora_rank",  type=int,   default=8)
+    parser.add_argument("--lora_rank", type=int, default=8)
     parser.add_argument("--lora_alpha", type=float, default=16.0)
     parser.add_argument("--lora_dropout", type=float, default=0.1)
-    parser.add_argument("--rlm_p",      type=float, default=0.5)
-    parser.add_argument("--nstdb_dir",  default=NSTDB_DIR)
-    parser.add_argument("--p_noise",    type=float, default=0.75)
-    parser.add_argument("--snr_set",    type=str,   default="24,18,12,6,0")
-    parser.add_argument("--seed",       type=int,   default=42)
+    parser.add_argument("--rlm_p", type=float, default=0.5)
+    parser.add_argument("--nstdb_dir", default=NSTDB_DIR)
+    parser.add_argument("--p_noise", type=float, default=0.75)
+    parser.add_argument("--snr_set", type=str, default="24,18,12,6,0")
+    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
     train(args)
 

@@ -24,20 +24,28 @@ import sys
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
 from sklearn.metrics import roc_auc_score
+from torch.utils.data import DataLoader
 
 sys.path.insert(0, os.path.dirname(__file__))
 from eval_mc_fair_compare import (
-    set_deterministic, inject_lora, load_ecgfm, BinaryHead, MulticlassHead,
-    MCDataset, infer, MODELS, CKPT_FM, DATA_DIR,
+    CKPT_FM,
+    DATA_DIR,
+    MODELS,
+    BinaryHead,
+    MCDataset,
+    MulticlassHead,
+    infer,
+    inject_lora,
+    load_ecgfm,
+    set_deterministic,
 )
 
 RAW_DIR = "data/raw/cpsc2018"
 ECTO_IDX = 4
 
 SNOMED_PACPVC = {284470004, 63593006, 427172004, 17338001}
-SNOMED_VE     = {164884008}
+SNOMED_VE = {164884008}
 
 
 def parse_dx_from_hea(hea_path):
@@ -82,7 +90,7 @@ def main():
 
     test_ds = MCDataset(os.path.join(DATA_DIR, "test"))
     rids = list(test_ds.record_ids)
-    ym   = test_ds.labels_mc
+    ym = test_ds.labels_mc
     ecto = ym[:, ECTO_IDX].astype(bool)
 
     print("=" * 74)
@@ -106,9 +114,9 @@ def main():
     n_ecto = int(ecto.sum())
     ve_pos = ecto & has_ve
     pp_pos = ecto & has_pp
-    pp_pure = ecto & has_pp & ~has_ve      # 순수 PAC/PVC
-    ve_any  = ecto & has_ve                # 164884008 포함
-    comorbid = (ym.sum(axis=1) > 1)
+    pp_pure = ecto & has_pp & ~has_ve  # 순수 PAC/PVC
+    ve_any = ecto & has_ve  # 164884008 포함
+    comorbid = ym.sum(axis=1) > 1
 
     print(f"\n이소성 양성 총: {n_ecto}")
     print(f"  · PAC/PVC 보유:        {int(pp_pos.sum())}")
@@ -119,18 +127,21 @@ def main():
     for name, mask in [("PAC/PVC 순수", pp_pure), ("164884008 보유", ve_any)]:
         m = mask.sum()
         c = (mask & comorbid).sum()
-        print(f"  {name:16s}: {int(c)}/{int(m)} = {100*c/max(m,1):.1f}% 동반")
+        print(f"  {name:16s}: {int(c)}/{int(m)} = {100 * c / max(m, 1):.1f}% 동반")
 
     # 모델별 이소성 확률 → 출처별 AUROC
     print("\n[ECG-FM + LoRA — 모델별 이소성 확률 추출]")
     backbone = load_ecgfm(CKPT_FM, device)
-    for p in backbone.parameters(): p.requires_grad_(False)
+    for p in backbone.parameters():
+        p.requires_grad_(False)
     inject_lora(backbone, rank=8, alpha=16.0, dropout=0.0)
     loader = DataLoader(test_ds, batch_size=32, shuffle=False, num_workers=0)
 
     ecto_neg = ~ecto
     print()
-    print(f"{'모델':<20}{'PAC/PVC순수 AUROC':>20}{'164884008 AUROC':>20}{'(전체이소성)':>14}")
+    print(
+        f"{'모델':<20}{'PAC/PVC순수 AUROC':>20}{'164884008 AUROC':>20}{'(전체이소성)':>14}"
+    )
     print("-" * 74)
     for spec in MODELS:
         if not os.path.exists(spec["ckpt"]):
@@ -143,13 +154,17 @@ def main():
         if spec["bin_key"] and spec["bin_key"] in ckpt:
             head_bin = BinaryHead().to(device)
             head_bin.load_state_dict(ckpt[spec["bin_key"]])
-        _, _, mc_probs, _ = infer(backbone, head_bin, head_mc, loader, device, spec["mc_act"])
+        _, _, mc_probs, _ = infer(
+            backbone, head_bin, head_mc, loader, device, spec["mc_act"]
+        )
         ep = mc_probs[:, ECTO_IDX]
         a_pp, n_pp = group_auroc(ep, pp_pure, ecto_neg)
         a_ve, n_ve = group_auroc(ep, ve_any, ecto_neg)
         a_all = roc_auc_score(ecto.astype(int), ep)
         leak = "" if spec["name"].startswith("5e") else "  (누수)"
-        print(f"{spec['name']:<20}{a_pp:>14.4f}({n_pp:3d}){a_ve:>13.4f}({n_ve:3d}){a_all:>14.4f}{leak}")
+        print(
+            f"{spec['name']:<20}{a_pp:>14.4f}({n_pp:3d}){a_ve:>13.4f}({n_ve:3d}){a_all:>14.4f}{leak}"
+        )
 
     print("-" * 74)
     print("해석 가이드: PAC/PVC AUROC ≫ 164884008 AUROC 이면,")

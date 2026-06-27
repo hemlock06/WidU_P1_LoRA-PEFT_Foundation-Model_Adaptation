@@ -59,27 +59,27 @@ try:
 except ImportError:
     sys.exit("[오류] scipy 미설치 — pip install scipy")
 
-FS_IN       = 1000
-FS_OUT      = 500
-N_LEADS     = 12
-SEG_LEN_OUT = FS_OUT * 10   # 5,000
+FS_IN = 1000
+FS_OUT = 500
+N_LEADS = 12
+SEG_LEN_OUT = FS_OUT * 10  # 5,000
 
 # 라벨 결정 규칙 (파일명 끝 문자)
-SEG_LABEL = {"a": 0, "b": 1}   # 'a'=정상, 'b'=응급; 나머지 제외
+SEG_LABEL = {"a": 0, "b": 1}  # 'a'=정상, 'b'=응급; 나머지 제외
 
 # STAFF-III lead → 표준 12-lead 슬롯 매핑
 # STAFF-III 순서: V1(0), V2(1), V3(2), V4(3), V5(4), V6(5), I(6), II(7), III(8)
 LEAD_REMAP = {
-    6:  0,   # I   → slot 0
-    7:  1,   # II  → slot 1
-    8:  2,   # III → slot 2
+    6: 0,  # I   → slot 0
+    7: 1,  # II  → slot 1
+    8: 2,  # III → slot 2
     # slots 3,4,5 (aVR,aVL,aVF) = 0
-    0:  6,   # V1  → slot 6
-    1:  7,   # V2  → slot 7
-    2:  8,   # V3  → slot 8
-    3:  9,   # V4  → slot 9
-    4: 10,   # V5  → slot 10
-    5: 11,   # V6  → slot 11
+    0: 6,  # V1  → slot 6
+    1: 7,  # V2  → slot 7
+    2: 8,  # V3  → slot 8
+    3: 9,  # V4  → slot 9
+    4: 10,  # V5  → slot 10
+    5: 11,  # V6  → slot 11
 }
 
 
@@ -92,7 +92,7 @@ def remap_leads(sig_t9):
     out = np.zeros((N_LEADS, T), dtype=np.float32)
     for src_idx, dst_slot in LEAD_REMAP.items():
         out[dst_slot] = sig_t9[:, src_idx]
-    return out   # (12, T)
+    return out  # (12, T)
 
 
 def load_record(rec_path):
@@ -107,7 +107,9 @@ def load_record(rec_path):
         return None
 
     if rec.fs != FS_IN:
-        print(f"  [경고] {os.path.basename(rec_path)}: fs={rec.fs} (기대={FS_IN}) — 스킵")
+        print(
+            f"  [경고] {os.path.basename(rec_path)}: fs={rec.fs} (기대={FS_IN}) — 스킵"
+        )
         return None
 
     sig = rec.p_signal
@@ -143,10 +145,12 @@ def main():
 
     # ── 1. 레코드 목록 수집 ───────────────────────────────────────────
     print("[1] 레코드 스캔 (a=정상, b=응급, 나머지 제외)")
-    hea_files = sorted([f[:-4] for f in os.listdir(args.data_dir) if f.endswith(".hea")])
+    hea_files = sorted(
+        [f[:-4] for f in os.listdir(args.data_dir) if f.endswith(".hea")]
+    )
 
     counts = {"a": 0, "b": 0, "other": 0}
-    selected = []   # (rec_name, label)
+    selected = []  # (rec_name, label)
 
     for name in hea_files:
         seg_char = name[-1].lower()
@@ -187,12 +191,12 @@ def main():
         sig_rs = sp_resample(sig, T_out, axis=0).astype(np.float32)
 
         # 리드 재배열: (T_out, 9) → (12, T_out)
-        sig_12 = remap_leads(sig_rs)   # (12, T_out)
+        sig_12 = remap_leads(sig_rs)  # (12, T_out)
 
         # 비중첩 10s 윈도우
         n_windows = T_out // SEG_LEN_OUT
         for w in range(n_windows):
-            seg = sig_12[:, w * SEG_LEN_OUT: (w + 1) * SEG_LEN_OUT]   # (12, 5000)
+            seg = sig_12[:, w * SEG_LEN_OUT : (w + 1) * SEG_LEN_OUT]  # (12, 5000)
             signals_out.append(seg)
             labels_out.append(label)
             rec_ids_out.append(f"{rec_name}_w{w:03d}")
@@ -202,8 +206,8 @@ def main():
     lab_arr = np.array(labels_out, dtype=np.int8)
     rid_arr = np.array(rec_ids_out, dtype=object)
 
-    np.save(os.path.join(args.out_dir, "signals.npy"),    sig_arr)
-    np.save(os.path.join(args.out_dir, "labels.npy"),     lab_arr)
+    np.save(os.path.join(args.out_dir, "signals.npy"), sig_arr)
+    np.save(os.path.join(args.out_dir, "labels.npy"), lab_arr)
     np.save(os.path.join(args.out_dir, "record_ids.npy"), rid_arr)
 
     n_emg = int((lab_arr == 1).sum())

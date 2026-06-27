@@ -46,3 +46,5 @@ build/
 
 # 로컬 작업 노트 (미추적)
 HANDOFF_*.md
+
+.pytest_cache/

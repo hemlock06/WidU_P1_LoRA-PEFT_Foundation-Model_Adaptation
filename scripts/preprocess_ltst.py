@@ -61,11 +61,11 @@ try:
 except ImportError:
     sys.exit("[오류] scipy 미설치 — pip install scipy")
 
-FS_IN       = 250
-FS_OUT      = 500
-N_LEADS     = 12
-SEG_LEN_OUT = FS_OUT * 10          # 5,000 샘플 @500Hz
-SEG_LEN_IN  = FS_IN * 10           # 2,500 샘플 @250Hz
+FS_IN = 250
+FS_OUT = 500
+N_LEADS = 12
+SEG_LEN_OUT = FS_OUT * 10  # 5,000 샘플 @500Hz
+SEG_LEN_IN = FS_IN * 10  # 2,500 샘플 @250Hz
 
 # Lead 매핑: ML2 → index 1 (Lead II), MV2 → index 7 (Lead V2)
 LEAD_MAP = {"ML2": 1, "MV2": 7}
@@ -77,8 +77,8 @@ NORMAL_LRST_THRESH = 10
 # ── 어노테이션 파싱 ──────────────────────────────────────────────────
 
 _EPISODE_START = re.compile(r"^\(rtst", re.IGNORECASE)
-_EPISODE_END   = re.compile(r"rtst.*\)$", re.IGNORECASE)
-_LRST_PAT      = re.compile(r"^LRST(\d)([+-]\d+)$", re.IGNORECASE)
+_EPISODE_END = re.compile(r"rtst.*\)$", re.IGNORECASE)
+_LRST_PAT = re.compile(r"^LRST(\d)([+-]\d+)$", re.IGNORECASE)
 
 
 def parse_episodes(ann):
@@ -113,8 +113,8 @@ def parse_lrst_values(ann):
         m = _LRST_PAT.match(note)
         if m:
             lead_idx = int(m.group(1))
-            value    = int(m.group(2))
-            sample   = ann.sample[i]
+            value = int(m.group(2))
+            sample = ann.sample[i]
             if sample not in lrst_map:
                 lrst_map[sample] = {}
             lrst_map[sample][lead_idx] = value
@@ -122,6 +122,7 @@ def parse_lrst_values(ann):
 
 
 # ── 윈도우 라벨 결정 ─────────────────────────────────────────────────
+
 
 def label_windows(n_windows, episodes, lrst_map, episode_buf=1):
     """
@@ -137,13 +138,14 @@ def label_windows(n_windows, episodes, lrst_map, episode_buf=1):
     # 에피소드 윈도우 집합
     ep_wins = set()
     buf_wins = set()
-    for (es, ee) in episodes:
+    for es, ee in episodes:
         w_start = es // SEG_LEN_IN
-        w_end   = ee // SEG_LEN_IN
+        w_end = ee // SEG_LEN_IN
         for w in range(max(0, w_start), min(n_windows, w_end + 1)):
             ep_wins.add(w)
-        for w in range(max(0, w_start - episode_buf),
-                       min(n_windows, w_end + 1 + episode_buf)):
+        for w in range(
+            max(0, w_start - episode_buf), min(n_windows, w_end + 1 + episode_buf)
+        ):
             buf_wins.add(w)
 
     # LRST 기반 정상 윈도우 판정
@@ -162,20 +164,21 @@ def label_windows(n_windows, episodes, lrst_map, episode_buf=1):
 
     for w in range(n_windows):
         if w in ep_wins:
-            labels[w] = 1                                     # 응급
+            labels[w] = 1  # 응급
         elif w in buf_wins:
-            labels[w] = -1                                    # 에피소드 경계 완충 → 제외
+            labels[w] = -1  # 에피소드 경계 완충 → 제외
         elif w in win_lrst:
             if win_lrst[w] < NORMAL_LRST_THRESH:
-                labels[w] = 0                                 # 정상 (LRST 낮음)
+                labels[w] = 0  # 정상 (LRST 낮음)
             else:
-                labels[w] = -1                                # 고편차 비에피소드 → 제외
+                labels[w] = -1  # 고편차 비에피소드 → 제외
         # else: LRST 어노테이션 없는 윈도우 → 제외 유지
 
     return labels
 
 
 # ── 신호 처리 ────────────────────────────────────────────────────────
+
 
 def process_record(rec_path, sig_names):
     """
@@ -196,7 +199,9 @@ def process_record(rec_path, sig_names):
     sig = np.nan_to_num(sig, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
 
     # 250Hz → 500Hz 리샘플 (resample_poly: polyphase 필터, FFT 대비 메모리 효율적)
-    sig_rs = resample_poly(sig, up=2, down=1, axis=0).astype(np.float32)  # (T_out, n_sig)
+    sig_rs = resample_poly(sig, up=2, down=1, axis=0).astype(
+        np.float32
+    )  # (T_out, n_sig)
     T_out = sig_rs.shape[0]
 
     # 12-lead 슬롯 매핑 정보만 미리 산출 (실제 배치는 윈도우 루프에서)
@@ -217,7 +222,7 @@ def make_window_12lead(sig_rs, slot_indices, w):
     """
     seg = np.zeros((N_LEADS, SEG_LEN_OUT), dtype=np.float32)
     start = w * SEG_LEN_OUT
-    end   = start + SEG_LEN_OUT
+    end = start + SEG_LEN_OUT
     for ch_idx, slot in slot_indices:
         seg[slot] = sig_rs[start:end, ch_idx]
     return seg
@@ -225,15 +230,19 @@ def make_window_12lead(sig_rs, slot_indices, w):
 
 # ── 메인 ─────────────────────────────────────────────────────────────
 
+
 def main():
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--data_dir",
-        default="data/raw/ltst")
-    parser.add_argument("--out_dir",
-        default="data/processed/ltst")
-    parser.add_argument("--episode_buf", type=int, default=1,
-        help="에피소드 경계 ±buf 윈도우 제외 (기본 1)")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--data_dir", default="data/raw/ltst")
+    parser.add_argument("--out_dir", default="data/processed/ltst")
+    parser.add_argument(
+        "--episode_buf",
+        type=int,
+        default=1,
+        help="에피소드 경계 ±buf 윈도우 제외 (기본 1)",
+    )
     args = parser.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -246,8 +255,7 @@ def main():
     print()
 
     # 레코드 목록 (헤더 파일 기준)
-    hea_files = sorted(f[:-4] for f in os.listdir(args.data_dir)
-                       if f.endswith(".hea"))
+    hea_files = sorted(f[:-4] for f in os.listdir(args.data_dir) if f.endswith(".hea"))
     print(f"발견된 레코드: {len(hea_files)}개")
     print()
 
@@ -272,20 +280,21 @@ def main():
             hdr = wfdb.rdheader(rec_path)
             sig_rs, slot_indices, n_windows = process_record(rec_path, hdr.sig_name)
 
-            win_labels = label_windows(n_windows, episodes, lrst_map,
-                                       episode_buf=args.episode_buf)
+            win_labels = label_windows(
+                n_windows, episodes, lrst_map, episode_buf=args.episode_buf
+            )
 
         except Exception as e:
             print(f"  [오류] {rec_name}: {e}")
             stat["skipped"] += 1
             continue
 
-        n_ep   = win_labels.count(1)
+        n_ep = win_labels.count(1)
         n_norm = win_labels.count(0)
-        n_exc  = win_labels.count(-1)
-        stat["ep_win"]   += n_ep
+        n_exc = win_labels.count(-1)
+        stat["ep_win"] += n_ep
         stat["norm_win"] += n_norm
-        stat["exc_win"]  += n_exc
+        stat["exc_win"] += n_exc
 
         # 윈도우 단위 12-lead 슬롯 배치 (메모리 효율)
         for w, lbl in enumerate(win_labels):
@@ -299,8 +308,10 @@ def main():
         # 레코드 단위 신호 메모리 즉시 해제 (다음 레코드 메모리 확보)
         del sig_rs
 
-        print(f"  {rec_name}: total={n_windows}  응급={n_ep}  정상={n_norm}  제외={n_exc}  "
-              f"에피소드={len(episodes)}개")
+        print(
+            f"  {rec_name}: total={n_windows}  응급={n_ep}  정상={n_norm}  제외={n_exc}  "
+            f"에피소드={len(episodes)}개"
+        )
 
     # ── 저장 ──────────────────────────────────────────────────────────
     if not all_signals:
@@ -311,8 +322,8 @@ def main():
     lab_arr = np.array(all_labels, dtype=np.int8)
     rid_arr = np.array(all_rec_ids, dtype=object)
 
-    np.save(os.path.join(args.out_dir, "signals.npy"),    sig_arr)
-    np.save(os.path.join(args.out_dir, "labels.npy"),     lab_arr)
+    np.save(os.path.join(args.out_dir, "signals.npy"), sig_arr)
+    np.save(os.path.join(args.out_dir, "labels.npy"), lab_arr)
     np.save(os.path.join(args.out_dir, "record_ids.npy"), rid_arr)
 
     n_emg = int((lab_arr == 1).sum())
@@ -322,7 +333,9 @@ def main():
     print("=" * 65)
     print("전처리 완료")
     print("=" * 65)
-    print(f"  처리 레코드: {len(hea_files) - stat['skipped']}개  (건너뜀 {stat['skipped']}개)")
+    print(
+        f"  처리 레코드: {len(hea_files) - stat['skipped']}개  (건너뜀 {stat['skipped']}개)"
+    )
     print(f"  총 윈도우:  {len(lab_arr)}개")
     print(f"    응급(허혈 ST): {n_emg}")
     print(f"    정상:          {n_nrm}")

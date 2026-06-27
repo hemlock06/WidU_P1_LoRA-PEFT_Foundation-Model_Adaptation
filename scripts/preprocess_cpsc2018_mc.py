@@ -46,21 +46,24 @@ import sys
 import numpy as np
 
 FS_REQUIRED = 500
-N_LEADS     = 12
-N_SAMPLES   = 5000
+N_LEADS = 12
+N_SAMPLES = 5000
 
 # ── SNOMED-CT 코드 → 다중분류 매핑 ───────────────────────────────────
 SNOMED_NORMAL = {426783006}
-SNOMED_AF     = {164889003}
-SNOMED_ISCH   = {429622005, 164931005}             # STD + STE
-SNOMED_COND   = {270492004, 164909002, 59118001}   # I-AVB + LBBB + RBBB
-SNOMED_ECTO   = {284470004, 63593006,              # PAC + SVPB
-                 427172004, 17338001,              # PVC + VPB
-                 164884008}                        # 심실 이소성(ventricular ectopics)
-                                                   # ★2026-05-29 추가: raw 603개 배제분 복구
+SNOMED_AF = {164889003}
+SNOMED_ISCH = {429622005, 164931005}  # STD + STE
+SNOMED_COND = {270492004, 164909002, 59118001}  # I-AVB + LBBB + RBBB
+SNOMED_ECTO = {
+    284470004,
+    63593006,  # PAC + SVPB
+    427172004,
+    17338001,  # PVC + VPB
+    164884008,
+}  # 심실 이소성(ventricular ectopics)
+# ★2026-05-29 추가: raw 603개 배제분 복구
 
-ALL_KNOWN = (SNOMED_NORMAL | SNOMED_AF | SNOMED_ISCH
-             | SNOMED_COND | SNOMED_ECTO)
+ALL_KNOWN = SNOMED_NORMAL | SNOMED_AF | SNOMED_ISCH | SNOMED_COND | SNOMED_ECTO
 
 CLASS_NAMES = {
     0: "정상(NSR)",
@@ -123,7 +126,7 @@ def map_label_mc(snomed_codes: set) -> int:
         return 4
     if snomed_codes & SNOMED_NORMAL:
         return 0
-    return -1   # 미인식 코드만 있는 레코드 → 제외
+    return -1  # 미인식 코드만 있는 레코드 → 제외
 
 
 def scan_records(data_dir: str) -> dict:
@@ -180,8 +183,8 @@ def split_records(record_ids, seed=42, train_ratio=0.70, val_ratio=0.15):
     rng.shuffle(ids)
     n = len(ids)
     n_train = int(n * train_ratio)
-    n_val   = int(n * val_ratio)
-    return ids[:n_train], ids[n_train:n_train + n_val], ids[n_train + n_val:]
+    n_val = int(n * val_ratio)
+    return ids[:n_train], ids[n_train : n_train + n_val], ids[n_train + n_val :]
 
 
 def save_split(out_dir: str, split: str, signals, multihots, singles, record_ids):
@@ -189,15 +192,15 @@ def save_split(out_dir: str, split: str, signals, multihots, singles, record_ids
     os.makedirs(split_dir, exist_ok=True)
 
     sig_arr = np.stack(signals).astype(np.float32)
-    mc_arr  = np.stack(multihots).astype(np.int8)        # (N, 5) multi-hot — 학습용
-    lab_arr = np.array(singles, dtype=np.int8)           # (N,) 우선순위 단일 — 리포트/호환용
+    mc_arr = np.stack(multihots).astype(np.int8)  # (N, 5) multi-hot — 학습용
+    lab_arr = np.array(singles, dtype=np.int8)  # (N,) 우선순위 단일 — 리포트/호환용
     rec_arr = np.array(record_ids, dtype=object)
     # 파생 이진: AF(idx1) 또는 급성허혈(idx2) 존재 → 응급(1)
     bin_arr = ((mc_arr[:, 1] | mc_arr[:, 2]) > 0).astype(np.int8)
 
-    np.save(os.path.join(split_dir, "signals.npy"),    sig_arr)
-    np.save(os.path.join(split_dir, "labels_mc.npy"),  mc_arr)   # ★ 신규: multi-hot
-    np.save(os.path.join(split_dir, "labels.npy"),     lab_arr)  # 단일라벨(호환)
+    np.save(os.path.join(split_dir, "signals.npy"), sig_arr)
+    np.save(os.path.join(split_dir, "labels_mc.npy"), mc_arr)  # ★ 신규: multi-hot
+    np.save(os.path.join(split_dir, "labels.npy"), lab_arr)  # 단일라벨(호환)
     np.save(os.path.join(split_dir, "labels_bin.npy"), bin_arr)
     np.save(os.path.join(split_dir, "record_ids.npy"), rec_arr)
 
@@ -206,21 +209,20 @@ def save_split(out_dir: str, split: str, signals, multihots, singles, record_ids
     print("    [multi-hot 클래스별 양성 수 (중복 허용)]")
     for k in range(5):
         n_k = int(mc_arr[:, k].sum())
-        print(f"    [{k}] {CLASS_NAMES[k]:30s}: {n_k:4d} ({100*n_k/n:.1f}%)")
+        print(f"    [{k}] {CLASS_NAMES[k]:30s}: {n_k:4d} ({100 * n_k / n:.1f}%)")
     n_multi = int((mc_arr.sum(axis=1) > 1).sum())
-    n_emg   = int(bin_arr.sum())
-    print(f"    └ 다중라벨 레코드(≥2 클래스): {n_multi} ({100*n_multi/n:.1f}%)")
-    print(f"    └ 파생이진 응급(AF/허혈): {n_emg} ({100*n_emg/n:.1f}%)")
+    n_emg = int(bin_arr.sum())
+    print(f"    └ 다중라벨 레코드(≥2 클래스): {n_multi} ({100 * n_multi / n:.1f}%)")
+    print(f"    └ 파생이진 응급(AF/허혈): {n_emg} ({100 * n_emg / n:.1f}%)")
     print(f"         → {split_dir}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--data_dir",
-        default="data/raw/cpsc2018")
-    parser.add_argument("--out_dir",
-        default="data/processed/cpsc2018_mc_ml")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--data_dir", default="data/raw/cpsc2018")
+    parser.add_argument("--out_dir", default="data/processed/cpsc2018_mc_ml")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
@@ -239,18 +241,18 @@ def main():
     print()
 
     print("[2] .hea '#Dx:' 파싱 → 5-class multi-hot 매핑")
-    mc_map     = {}   # rec_id → multihot (5,)
-    single_map = {}   # rec_id → 우선순위 단일라벨 (호환용)
+    mc_map = {}  # rec_id → multihot (5,)
+    single_map = {}  # rec_id → 우선순위 단일라벨 (호환용)
     label_dist = {i: 0 for i in range(5)}
-    n_excl     = 0
+    n_excl = 0
 
     for rec_id, hea_path in sorted(records.items()):
         codes = parse_dx_from_hea(hea_path)
-        vec   = map_label_multihot(codes)
-        if vec.sum() == 0:          # 인식 코드 전무 → 제외
+        vec = map_label_multihot(codes)
+        if vec.sum() == 0:  # 인식 코드 전무 → 제외
             n_excl += 1
             continue
-        mc_map[rec_id]     = vec
+        mc_map[rec_id] = vec
         single_map[rec_id] = map_label_mc(codes)
         for k in range(5):
             label_dist[k] += int(vec[k])
@@ -259,8 +261,10 @@ def main():
     pos_total = sum(label_dist.values())
     print(f"  유효 레코드: {total}건 (multi-hot 양성 총합 {pos_total})")
     for k in range(5):
-        print(f"  [{k}] {CLASS_NAMES[k]:30s}: {label_dist[k]:4d} "
-              f"({100*label_dist[k]/total:.1f}% of records)")
+        print(
+            f"  [{k}] {CLASS_NAMES[k]:30s}: {label_dist[k]:4d} "
+            f"({100 * label_dist[k] / total:.1f}% of records)"
+        )
     print(f"  제외(미인식 코드만): {n_excl}건")
     print()
 
@@ -274,9 +278,7 @@ def main():
     print("-" * 70)
 
     skip_total = 0
-    for split_name, ids in [("train", train_ids),
-                             ("val",   val_ids),
-                             ("test",  test_ids)]:
+    for split_name, ids in [("train", train_ids), ("val", val_ids), ("test", test_ids)]:
         signals, multihots, singles, rec_ids = [], [], [], []
         skip_count = 0
 

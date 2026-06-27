@@ -22,8 +22,8 @@ CACHET-CADB Short Format 다운로드 + patient-level split 확인
 
 import os
 import sys
-import zipfile
 import urllib.request
+import zipfile
 
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -41,6 +41,7 @@ def download_with_progress(url, dest_path, label):
         if total > 0 and count % 100 == 0:
             pct = min(count * block / total * 100, 100)
             print(f"\r  {label}: {pct:.1f}%", end="", flush=True)
+
     urllib.request.urlretrieve(url, dest_path, reporthook=hook)
     print(f"\r  {label}: 100.0%")
 
@@ -55,11 +56,13 @@ def inspect_hdf5(hdf5_path):
 
     print(f"\n[HDF5 구조 분석] {os.path.basename(hdf5_path)}")
     with h5py.File(hdf5_path, "r") as f:
+
         def print_tree(name, obj, depth=0):
             indent = "  " * depth
             shape = obj.shape if hasattr(obj, "shape") else ""
             dtype = obj.dtype if hasattr(obj, "dtype") else ""
             print(f"{indent}{name}: {shape} {dtype}")
+
         print("  최상위 키:", list(f.keys()))
         for key in list(f.keys())[:3]:
             obj = f[key]
@@ -75,13 +78,21 @@ def inspect_hdf5(hdf5_path):
                 print(f"    sample values: {obj[:3] if obj.ndim == 1 else obj[0, :3]}")
 
         # 환자 ID 탐색
-        pid_candidates = ["patient_id", "patient", "subject", "pid",
-                          "PatientID", "patient_ids", "subjects"]
+        pid_candidates = [
+            "patient_id",
+            "patient",
+            "subject",
+            "pid",
+            "PatientID",
+            "patient_ids",
+            "subjects",
+        ]
         print("\n  [환자 ID 탐색]")
         for key in pid_candidates:
             if key in f:
                 ids = f[key][:]
                 import numpy as np
+
                 unique = np.unique(ids)
                 print(f"    '{key}': {len(ids)}개 샘플, {len(unique)}명 환자")
                 print(f"    유니크 ID: {unique[:10]}")
@@ -92,13 +103,21 @@ def inspect_hdf5(hdf5_path):
             print(f"    최상위 키 {len(top_keys)}개: {top_keys[:8]}")
 
         # 라벨 탐색
-        label_candidates = ["label", "labels", "rhythm", "annotation",
-                            "class", "classes", "rhythm_label"]
+        label_candidates = [
+            "label",
+            "labels",
+            "rhythm",
+            "annotation",
+            "class",
+            "classes",
+            "rhythm_label",
+        ]
         print("\n  [라벨 탐색]")
         for key in label_candidates:
             if key in f:
                 labs = f[key][:]
                 import numpy as np
+
                 unique_labs = np.unique(labs)
                 print(f"    '{key}': {len(labs)}개, 유니크={unique_labs}")
                 break
@@ -139,7 +158,7 @@ def main():
 
     # ── 파일 크기 확인 ────────────────────────────────────────
     sz = os.path.getsize(hdf5_path)
-    print(f"\n[확인] {HDF5_NAME}: {sz:,} bytes ({sz/1e6:.1f} MB)")
+    print(f"\n[확인] {HDF5_NAME}: {sz:,} bytes ({sz / 1e6:.1f} MB)")
 
     # ── HDF5 구조 탐색 ────────────────────────────────────────
     inspect_hdf5(hdf5_path)
