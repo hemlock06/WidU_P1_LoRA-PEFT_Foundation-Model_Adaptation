@@ -1,0 +1,17 @@
+# =============================================================================
+# WidU P1 — conda 환경 정의 (재현성: HANDOFF_ISSUES.md P1-1)
+# =============================================================================
+# 사용:  conda env create -f environment.yml  &&  conda activate widu-p1
+# Python 버전만 문서 검증값(3.9)으로 고정하고, 파이썬 패키지는 requirements.txt에
+# 위임한다(버전 핀 상태·근거는 requirements.txt 주석 참조).
+# fairseq_signals(ECG-FM 백본)는 pip 미설치 — REPRODUCIBILITY.md §2 절차로 별도 설치.
+# -----------------------------------------------------------------------------
+name: widu-p1
+channels:
+  - conda-forge
+dependencies:
+  # README.md L107 / REPRODUCIBILITY §1: Python 3.9
+  - python=3.9
+  - pip
+  - pip:
+      - -r requirements.txt
