@@ -31,6 +31,7 @@
   **torch 불필요 → 이 환경에서 실제 실행됨**.
 - `tests/test_embedding_contract.py` — `infer()` 의 embedding[768] 출력 계약 단정.
   torch+체크포인트 필요 → 없으면 자동 skip(검증 환경용 회귀 가드).
+  **(후속 런타임 검증: 2026-06-28 py39+torch2.1.2+실 체크포인트로 2 passed — 단일 (768,)·배치 (N,768) 확인.)**
 
 ---
 
