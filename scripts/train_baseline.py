@@ -27,7 +27,6 @@
 import argparse
 import os
 import sys
-import time
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -223,7 +222,6 @@ def train(args):
     for epoch in range(1, args.epochs + 1):
         head.train()
         total_loss = 0.0
-        t0 = time.time()
 
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)

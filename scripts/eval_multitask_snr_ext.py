@@ -104,8 +104,8 @@ def main():
         if not os.path.isdir(path):
             continue
         s = np.load(os.path.join(path, "signals.npy"))
-        l = np.load(os.path.join(path, "labels.npy"))
-        au, sens = bin_metrics(bb, hb, s, l, dev)
+        lab = np.load(os.path.join(path, "labels.npy"))
+        au, sens = bin_metrics(bb, hb, s, lab, dev)
         rows += [
             (f"ext_{db}_auroc", round(au, 4)),
             (f"ext_{db}_sens95", round(sens, 4)),

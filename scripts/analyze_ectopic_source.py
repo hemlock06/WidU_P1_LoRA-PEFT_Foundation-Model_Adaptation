@@ -112,7 +112,6 @@ def main():
         print(f"[참고] .hea 미발견 {missing}건")
 
     n_ecto = int(ecto.sum())
-    ve_pos = ecto & has_ve
     pp_pos = ecto & has_pp
     pp_pure = ecto & has_pp & ~has_ve  # 순수 PAC/PVC
     ve_any = ecto & has_ve  # 164884008 포함

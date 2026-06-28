@@ -287,7 +287,7 @@ def main():
 
     # ── 3. Split ──────────────────────────────────────────────────────
     print("[3] record-level random split (seed=42, 70/15/15)")
-    valid_ids = [r for r, l in label_map.items() if l != -1]
+    valid_ids = [r for r, lab in label_map.items() if lab != -1]
     train_ids, val_ids, test_ids = split_records(valid_ids, seed=args.seed)
     print(f"  학습: {len(train_ids)}, 검증: {len(val_ids)}, 테스트: {len(test_ids)}")
     print()
