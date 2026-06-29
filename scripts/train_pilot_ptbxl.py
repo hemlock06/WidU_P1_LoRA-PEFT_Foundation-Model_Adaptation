@@ -22,7 +22,6 @@ import math
 import os
 import random
 import sys
-import time
 
 import numpy as np
 import torch
@@ -351,7 +350,6 @@ def main():
         head.train()
         total_loss = 0.0
         n_samples = 0
-        t0 = time.time()
 
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)

@@ -311,7 +311,6 @@ def main():
         results[model_name] = {}
         print(f"[{model_name}] 평가 중...")
         for cfg_name, available in LEAD_CONFIGS:
-            lead_str = "+".join(LEAD_NAMES[i] for i in available)
             auroc, f1, sens, probs, labels = compute_metrics(
                 bb, head, test_ds, available, device, args.batch_size
             )
