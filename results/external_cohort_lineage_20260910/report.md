@@ -62,7 +62,7 @@ AFIB 91; STD_/STE_ 93; 1AVB/CLBBB/CRBBB 111; PAC/PVC 95; NORM 834. Other conduct
 require explicit exclusion rules. Under the historical CPSC priority (ST > AF > conduction >
 ectopy > normal) the exclusive counts are 93 / 71 / 99 / 59 / 797 with 563 unmapped.
 The NORM count is sensitive to the likelihood threshold (839 / 834 / 633 at >=1 / >=50 / =100).
-Positive counts per disease are below 100 each; intervals will be wide.
+Positives per disease run 91 to 111, so intervals will be wide for every group.
 
 ## 5. What F3 does and does not establish
 
@@ -77,8 +77,10 @@ Any PTB-XL evaluation therefore remains **conditional external validation**.
 ## 6. INCART: original versus Challenge and annotation content
 
 - Original: 75 records from 32 Holter sources (patients 1..32 in header comments and
-  `files-patients-diagnoses.txt`), 12 leads, 257 Hz, 462600 samples (1800 s) each, gains
-  250..1100 ADC/mV. All 150 header/annotation files match the official SHA256SUMS.
+  `files-patients-diagnoses.txt`), 12 leads, 257 Hz, 462600 samples (1800 s) each. Measured
+  ADC gains span **240..1063** across the 75 headers; the official README states "250 to 1100",
+  which is the source's own rounding and not a measurement of these files. All 150
+  header/annotation files match the official SHA256SUMS.
 - Challenge subset: 74 records; `I0036` (original I36, patient 16) is absent. Age and sex
   agree for all 74 pairs. Challenge headers carry record-level SNOMED codes only.
 - Beat labels: N 150410, V 20013, A 1944, F 219, R 3174 (all in I16/I17 = patient 8, plus 8
@@ -93,14 +95,70 @@ Any PTB-XL evaluation therefore remains **conditional external validation**.
   patients; the N-ratio >= 0.9 rule admits up to 10% ectopic beats per "normal" window.
 - Four-group availability: AF is temporal but from 2 patients; ectopy is beat-level (V in 70
   records, A in 33); conduction has only RBBB beats in patient 8 (plus 8 beats in I71) and no
-  1AVB/LBBB; ST change exists only as record-level free text (10 records / 8 patients).
+  1AVB/LBBB; ST change exists only as record-level free text, in 10 records across **9**
+  distinct patients (I03, I06, I12, I15, I24, I40, I50, I59, I60, I62; only patient 26 owns
+  two). Two independent routes agree — the free-text descriptions and the Challenge ST SNOMED
+  codes select the identical 10 records. This count is recomputed from `incart_record_table.csv`
+  and is not produced by the audit script.
   INCART cannot support a four-group evaluation. It can support an ectopy window endpoint and
   a small AF endpoint with patient-grouped uncertainty (32 groups).
 - Exposure: INCART is excluded from ECG-FM pretraining (paper and published list) and was
   never in P1 training. It was used in P1 inference-only evaluations and in the 5f inversion
   diagnosis, so it is not "unseen in development".
 
-## 7. Files
+## 7. Adversarial review: what was adjudicated and what was not
+
+A seven-dimension adversarial review ran on 2026-09-10, each dimension re-deriving this
+report's numbers from the primary sources rather than reading them back. It raised **62
+findings**. Every finding was then to be tested by three independent refuters.
+
+**Only 10 of the 62 were actually adjudicated.** The refuter stage hit an API session limit
+and 156 of 193 agents died mid-run. The orchestration script classified a finding with zero
+surviving voters as "not surviving", so **52 findings — including 4 marked critical and 25
+marked major — were silently filed as refuted when they were in fact never tested.** That is
+the "crash is not survival, it is unmeasured" failure reproduced inside the very harness meant
+to catch it. The counts here are the corrected reading, not the script's output.
+
+Of the 10 adjudicated, 7 survived and 3 were genuinely refuted on primary-source grounds.
+
+The findings acted on below were each **re-derived by hand from the primary artefacts before
+being accepted**, not taken on the reviewer's word:
+
+| Corrected | Was | Now | Where |
+|---|---|---|---|
+| INCART ST-change patients | 8 | **9** | §6, this report |
+| INCART ADC gain range | 250..1100 (quoted from README) | **240..1063** (measured) | §6, this report |
+| Record 420 noise spans in the hand-trace | three | **four** | §8, this report |
+| PTB-XL per-disease positives | "below 100 each" | **91 to 111** | §4, this report |
+| VFDB positive windows under the protocol's own exclusion | 1039 / 118 | **802 / 109** | emergency protocol §5 |
+| ST endpoint composition | "STD_/STE_" | **STD_ only; STE_ contributes 0 of 93** | validation protocol §4 |
+| Secondary cohort rule | SR carve-out unstated | **stated** | validation protocol §4 |
+| Threshold source | presented as available | **waveforms absent; reconstruction + positive control required** | validation protocol §7 |
+| Abort-rule hashes | named but not recorded | **four SHA-256 values recorded** | validation protocol §10 |
+| Analysis 1 decision statistic | "stably" undefined | **mean ≥ 0.50 and min ≥ 0.50 over ten seeds** | validation protocol §9 |
+| INCART amplitude precedent | read as an amplitude warning | **corrected to what §⑪ concluded** | validation protocol §6 |
+
+**Known defects left in the shipped scripts, not yet fixed:**
+
+- `audit_incart_annotations.py` reports `challenge_pvc_records: 0`. That is a regex artifact:
+  the Challenge headers use `VEB`/`VPVC`, not `PVC`, and **59** of the 74 records carry a
+  ventricular-ectopy code. The zero must not be read as an absence.
+- The same script computes no ST record or patient count, so the ST figures in §6 are
+  recomputed here rather than produced by the audit.
+- `audit_vfdb_episodes.py` counts positive windows without the noise filter it applies to
+  negatives, counts 22 `UNLABELED_START` pseudo-episodes inside `rhythm_episodes_total`, and
+  does not disclose its end-of-record noise fallback in the `rule` string. All three are
+  itemised in the emergency-rhythm protocol §7.
+
+These are recorded rather than patched because the interpreter that produces these artefacts is
+blocked (§8), so a script edit could not be re-run and would leave code and output disagreeing
+with no way to tell which is current.
+
+**The 52 unmeasured findings are unresolved, not dismissed.** They are preserved in the
+workflow transcript at `subagents/workflows/wf_71c343ec-5cd/journal.jsonl` and must be
+re-adjudicated before this work is relied on.
+
+## 8. Files
 
 `ptbxl_cross_version_audit.json`, `ptbxl_cross_version_table.csv`, `ptbxl_f3_eligible_records.csv`,
 `ptbxl_f3_label_flags.csv`, `ptbxl_waveform_identity_sample.csv`, `ptbxl_source_manifest.json`,
@@ -118,7 +176,7 @@ Test status, stated exactly:
   after the audits had already produced their outputs but before these tests could run. They
   are committed unexecuted and must be run before the emergency-rhythm work proceeds.
   The episode logic they pin was instead verified by hand-tracing records 605 (leading noise),
-  424 (noise inside an episode, repeated identical rhythm) and 420 (three noise spans, three
+  424 (noise inside an episode, repeated identical rhythm) and 420 (four noise spans, three
   identical rhythm markers) against the official annotation rule, and by reconciling every
   raw marker count with its merged episode count (VT 93 markers to 90 episodes, explained
   entirely by records 420 and 426). Hand-tracing is evidence; it is not a substitute for the

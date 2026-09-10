@@ -54,6 +54,11 @@ patients**, defined as records satisfying all four conditions.
    valid split. Two records fail only this condition (13803, 15741); both have partners under
    a *different* patient id, so patient-level filtering alone would have missed them.
 
+"Patient-level" here means PTB-XL's own `patient_id`, and that field is **not** a reliable
+identity boundary: 18 of the 38 removed duplicates carry a different `patient_id` from the
+identical-waveform record they duplicate. Condition 4 exists to cover exactly that gap, and it
+is what removes 13803 and 15741. Condition 2 and 3 alone would have kept both.
+
 Records are never re-selected after outcomes. If a record fails to load or preprocess it is
 excluded and counted in the failure table; the cohort is not topped up.
 
@@ -82,12 +87,34 @@ Rules fixed here:
   handled by the rule above, not silently dropped.
 - Records with no mapped code are not silently discarded; they appear in the cohort tables
   with an explicit "unmapped" marker.
+- **`SR` (sinus rhythm) is exempt from the "other rhythm" exclusion below.** Nearly every
+  PTB-XL record carries it, so treating it as a disqualifying rhythm code would collapse the
+  secondary cohort. The exemption is what makes that cohort 844 records rather than roughly a
+  twelfth of that; it is applied in `audit_ptbxl_cross_version.py` and is stated here because
+  the secondary cohort is not reproducible from the exclusion rule without it.
+
+⚠️ **The ST-change endpoint is, in this cohort, entirely ST depression.** All 93 F3 positives
+carry `STD_`; `STE_` contributes **zero**. The endpoint is therefore narrower than its name and
+than the historical CPSC STD/STE task it is matched to, and any result must be reported as an
+ST-depression result rather than as ST change in general.
 
 ## 5. Two evaluation views, primary declared in advance
 
 **Primary — per-disease one-vs-rest on the full F3 cohort (1682 records / 1673 patients).**
-This matches how Sens@95Sp is defined in the frozen internal protocol, which is already
-one-vs-rest, and it preserves the positives.
+
+This choice is inherited, not made today. The internal protocol frozen on 2026-09-09
+(`records/electrode_coverage_protocol_v1.md`, "Metrics and selection, fixed before new
+outcomes") already declares "Primary four disease groups: AF, ischemia, conduction, ectopy",
+runs its Pareto selection over "all four Sens@95Sp values (maximize)", and states that "No
+mean score may hide a weak disease class". A per-disease Sens@95Sp is a per-class ROC, which
+is one-vs-rest by construction — the term itself is used in
+`records/paper_synthesis_20260910.md` §6, not in the frozen protocol, and is quoted here from
+that document rather than attributed to the protocol.
+
+So per-disease evaluation is the frozen study's own primary framing, and carrying it across is
+continuity, not a view selected after seeing that it yields more positives. The exclusive
+five-class view below is the one that departs from the internal framing, which is why it is
+secondary despite being the closer match to the model's output contract.
 
 | Group | Positive records | Positive patients |
 |---|---:|---:|
@@ -124,11 +151,17 @@ Lead order in both sources is I, II, III, aVR, aVL, aVF, V1–V6 and is asserted
 rather than assumed.
 
 **Preflight, run and reported before any prediction:** per-lead amplitude distribution of the
-PTB-XL cohort against the CPSC training split. Unit parity is not amplitude parity — INCART
-is the precedent, where both sources were in mV yet differed about sixfold in standard
-deviation, and a global scale correction did not repair the resulting failure
-(`records/03_eval_results.md` §⑪). The measured distributions are reported as context. **No
-scale correction is applied**, because doing so would alter the frozen input contract.
+PTB-XL cohort against the CPSC training split, reported as context only.
+
+The INCART precedent is cited here for what it actually concluded, which is the opposite of an
+amplitude warning. `records/03_eval_results.md` §⑪ found INCART about sixfold larger in
+standard deviation than the CPSC training data, **tested the scale hypothesis and rejected it**
+(global rescaling moved AUROC 0.281 to 0.274), and attributed the failure to systematic
+misclassification at the representation level. So an amplitude gap is not by itself evidence of
+transfer risk, and a matching amplitude distribution is not evidence of safety. The preflight
+exists so the distributions are on record, not so a decision can be read off them. **No scale
+correction is applied**, because doing so would alter the frozen input contract and because the
+one time it was tried it did not help.
 
 ## 7. Thresholds
 
@@ -136,6 +169,20 @@ Sens@95Sp operating points are taken from the original CPSC multiclass **validat
 (933 records, `work/stage2_original_assets/data/processed/cpsc2018_mc/val/`), computed once
 per configuration and per disease, written to a threshold file, hashed, and committed
 **before** any PTB-XL inference runs. The internal test split is never used to set them.
+
+⚠️ **That directory holds only `record_ids.npy`, `labels.npy` and `labels_bin.npy` — there is
+no `signals.npy`.** The 2026-09-09 recovery restored identifiers and labels, not waveforms, so
+the validation waveforms must be **regenerated** before any threshold can be computed. All 933
+raw `.mat` files are present in `data/raw/cpsc2018/`, and the frozen preprocessing is
+deterministic and independent of the split seed, so regeneration is possible — but it is a
+reconstruction and is labelled as one wherever the thresholds are reported.
+
+**Mandatory positive control before the reconstruction is trusted:** regenerate the *test*
+split from raw with the same code path and compare it byte-for-byte against the surviving
+`data/processed/cpsc2018_mc/test/signals.npy`. If that comparison is not exact, the
+regeneration does not reproduce the original arrays and the threshold step stops. Passing it
+establishes the pipeline, not the validation array itself; the validation reconstruction is
+still reported as reconstructed.
 
 This is the first time P1 reports a genuinely pre-fixed operating point. The internal
 Sens@95Sp values are empirical points chosen inside the test set and are therefore not
@@ -164,8 +211,12 @@ from any interval that excludes zero.
 ## 9. Prespecified analyses, and what would count as a finding
 
 1. Does any low-contact configuration reach all four disease sensitivities ≥ 0.50 at the
-   pre-fixed threshold, stably across the ten feature-mask seeds? The internal study did not:
-   V1+V2 passed at seed 42 but averaged 0.4707 on ectopy over ten seeds.
+   pre-fixed threshold, across the ten feature-mask seeds? **Decision statistic, fixed here:**
+   a configuration passes only if, for each of the four diseases, the *mean* sensitivity over
+   seeds 30000–30009 is ≥ 0.50 **and** the *minimum* over those ten seeds is ≥ 0.50. Reporting
+   uses the mean, the minimum and the per-seed spread. The internal study fails this test:
+   V1+V2 cleared all four floors at seed 42 but its ten-seed ectopy mean was 0.470732 with a
+   minimum of 0.426829. Single-seed passes are never reported as passes.
 2. Does the ranking of the eight configurations by Macro-F1 agree with the internal ranking?
    Rank agreement is reported as a Kendall tau with its interval, not as pass/fail.
 3. Does the frozen model degrade in the direction seen for INCART (systematic class
@@ -177,8 +228,15 @@ Exploratory analyses are permitted and are labelled exploratory in the same tabl
 
 - If preprocessing fails on more than 1% of the cohort, the run stops and the cause is
   reported before any metric is computed.
-- If the a07 checkpoint hash, the candidate table hash, or the cohort file hash does not match
-  the values recorded here, the run stops.
+- If any of these SHA-256 values does not match, the run stops. They are recorded here so the
+  rule is executable rather than nominal.
+
+| Artefact | SHA-256 |
+|---|---|
+| a07 checkpoint | `287148bfd01ac67b5192268c6c69cc4cc230c004bdfdf332285f38a3b43b08dd` |
+| `results/paper_package_20260910/candidate_table.csv` | `83241b75482dcef01bf49851d5aa6fd4255ca86495d45223fb89e69818805456` |
+| `results/external_cohort_lineage_20260910/ptbxl_f3_eligible_records.csv` | `b23fbe6661efa02ff9eda9b1d17631d4b7fb6e7e96855a46eacba4c1ecbd9c8d` |
+| `results/external_cohort_lineage_20260910/ptbxl_f3_label_flags.csv` | `3f33afd43a3b8d600ab1b232e4553c311888fa333e2708fca421227bafab24c5` |
 - Raw per-record probabilities, record ids, both label views, failure and skip counts, the
   threshold file hash, environment and wall-clock timing are preserved for every run, as in
   the internal study.

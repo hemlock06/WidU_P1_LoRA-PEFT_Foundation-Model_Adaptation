@@ -34,7 +34,7 @@ the official source, all 22 WFDB checksums recomputed and matching.
 | Channels | 2, both named `ECG`; no lead or electrode geometry documented |
 | Sampling | 250 Hz |
 | Length | 525000 samples = 2100 s per record; 46200 s total (12 h 50 m) |
-| Annotations | 592 rhythm-change markers; **no beat labels** |
+| Annotations | 592 markers, of which 73 are `(NOISE` and 519 change rhythm; **no beat labels** |
 | Subjects | Not identified. Records cannot be grouped by patient. |
 
 The official overview describes half-hour records; the headers say 35 minutes. Header-derived
@@ -46,30 +46,55 @@ The official database page states: "The rhythm change annotations are placed at 
 of the episode of the indicated rhythm. The previous rhythm continues during episodes marked
 by (NOISE; the noise ends at the time of the next annotation."
 
-Implemented in `scripts/audit_vfdb_episodes.py` and pinned by `tests/test_vfdb_episodes.py`:
+Implemented in `scripts/audit_vfdb_episodes.py`:
 
 - A rhythm marker sets the rhythm state from its sample until the **next rhythm marker**.
 - A `(NOISE` marker opens a noise span ending at the next marker of any kind and **does not
   change the rhythm state**. A naive previous-annotation-to-next-annotation parser labels the
-  post-noise interval as NOISE and is wrong; one regression test encodes exactly this contrast.
+  post-noise interval as NOISE and is wrong.
 - Samples before the first rhythm marker are `UNLABELED_START`, never assumed normal. Record
   605 opens with `(NOISE`, and one record's first marker arrives 13999 samples in.
+- **Where the official rule is silent, the implementation extrapolates and this is not a
+  reading of the rule.** Six of 22 records (419, 420, 422, 423, 424, 605) end with a `(NOISE`
+  marker, so there is no "next annotation" for the noise to end at. The code extends that span
+  to end-of-record. It accounts for 1771.5 s of the 6064.9 s total noise, or 29.2%; the
+  bounded, rule-derived part is 4293.4 s. Reading it the other way (noise ends at the marker)
+  moves the noise-free full-malignant window count from 732 to 829 and the clean-negative
+  count from 1603 to 1630. Both readings are recorded; neither is established by the source.
 
-Under this rule the 592 markers yield the following, with 73 noise spans:
+Of the 592 annotations, **73 are `(NOISE` markers**, which by the rule above do not change
+rhythm; 519 are rhythm markers. Applying the rule yields 488 spans, of which 22 are
+`UNLABELED_START` pre-annotation regions totalling 1706.1 s. **Real annotated rhythm episodes
+are therefore 466**, not 488.
 
-| Target set | Episodes | Records | Total seconds | Median | ≥10 s | ≥30 s |
-|---|---:|---:|---:|---:|---:|---:|
-| VT | 90 | 19 | 6203 | 4.0 s | 21 | 15 |
-| VF + VFIB + VFL | 105 | 8 | 4270 | 2.9 s | 18 | 16 |
-| VT + VFL + VF + VFIB | 195 | 22 | 10473 | 3.4 s | 39 | 31 |
-| Asystole | 12 | 6 | 795 | 11.4 s | 8 | 3 |
+| Target set | Episodes | Records | Total s | of which noise | Median | ≥10 s | ≥30 s | of those ≥30 s: >50% noise |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| VT | 90 | 19 | 6203.1 | 963.1 (15.5%) | 4.0 s | 21 | 15 | 4 |
+| VF + VFIB + VFL | 105 | 8 | 4269.7 | 1255.6 (29.4%) | 2.9 s | 18 | 16 | 3 |
+| VT + VFL + VF + VFIB | 195 | 22 | 10472.8 | 2218.7 (21.2%) | 3.4 s | 39 | 31 | 7 |
+| Asystole | 12 | 6 | 795.3 | 3.2 (0.4%) | 11.4 s | 3 | 3 | 0 |
+
+**The noise column is load-bearing and must not be dropped when this table is quoted.**
+"15 VT episodes ≥30 s" reads as sustained analysable VT, but four of them are more than half
+annotated noise (record 605: 452.2 s at 93.7% noise; 420: 669.8 s at 57.9%; 425: 96.8 s at
+70.3%; 426: 102.3 s at 65.8%), and for the malignant set the worst is 419 VFL at 719.2 s and
+92.6% noise. Usable sustained-episode counts are smaller than the ≥30 s column suggests.
 
 Marker counts are not adjudicated clinical events, and raw marker totals (VT 93, VFL 98,
 VF 9, VFIB 4 in the readiness audit) differ from episode counts because consecutive identical
-states merge. Neither figure is a patient count.
+states merge — the merge fires 53 times on real data, 52 of them the rhythm-re-annotated-
+after-noise case. Neither figure is a patient count.
 
-Negatives: 1603 ten-second windows across 15 records are pure sinus with no noise overlap.
-That is the entire clean-negative supply, from an all-abnormal cohort.
+Negatives: 1603 ten-second windows across 15 records are pure sinus with no noise overlap
+(1778 before the noise filter). That is the entire clean-negative supply, from an
+all-abnormal cohort.
+
+**Test status.** `tests/test_vfdb_episodes.py` pins the noise-does-not-terminate-rhythm
+contrast, the unlabeled prefix and the late-first-marker case. It does **not** yet exercise
+the merge step, `(NOISE` as the final marker, or two consecutive `(NOISE` markers, and the
+suite has never been executed (see §7). The merge step is what actually realises "the previous
+rhythm continues" when the same rhythm is re-annotated after noise, so a regression there
+would change every count in the table above while the current tests stayed green.
 
 ## 4. What the data cannot support
 
@@ -104,7 +129,22 @@ spans or `UNLABELED_START` are excluded and counted.
 
 **Label.** A window is positive when the target set covers at least half of it; windows with
 target coverage strictly between 0 and 0.5 are excluded from training and reported separately
-at evaluation. Under the combined target this is 1039 positive windows, 118 ambiguous.
+at evaluation.
+
+Under the combined target, and **after applying the exclusion stated in the Input paragraph
+above**, this is **802 positive windows and 109 ambiguous**, against 1603 clean negatives — a
+ratio of 1:2.00. Before the exclusion the same rule gives 1039 and 118, and that larger figure
+must not be used to size the study: 237 of those 1039 (22.8%) overlap noise or the unlabeled
+prefix, and 206 of them are entirely annotated noise. The counts are re-derivable from
+`results/vfdb_episodes_20260910/window_labels_10s.csv` by filtering
+`malignant_ventricular_VT_VFL_VF_VFIB_fraction >= 0.5` together with `noise_fraction == 0`
+and `unlabeled_fraction == 0`.
+
+⚠️ The shipped `results/vfdb_episodes_20260910/audit.json` reports the **un-excluded**
+positive counts (`windows_fraction_ge_0.5`) while its negative count already applies the noise
+filter, so the two classes in that artifact are not built under the same signal-quality rule.
+That asymmetry is a defect in the audit script, recorded in §7; the corrected figures above,
+not the artifact's, govern this protocol.
 
 **Models compared.** (a) frozen ECG-FM backbone with a new rhythm head; (b) the frozen P1
 backbone with a new adapter; (c) a small independent detector trained from scratch. Which is
@@ -131,3 +171,24 @@ split list rather than assumed, and the unresolved P1 warm-start lineage applies
 
 An additional bounded feasibility study on a second source with subject identifiers would be
 required before any claim generalises beyond these 22 records; VFDB alone cannot support one.
+
+## 7. Known defects in the shipped artifacts, and what has not been re-run
+
+An adversarial review on 2026-09-10 found the following in `scripts/audit_vfdb_episodes.py`
+and `results/vfdb_episodes_20260910/`. Every figure below was re-derived independently from
+`window_labels_10s.csv` and `episodes.csv` before being accepted.
+
+| Defect | Effect | Status |
+|---|---|---|
+| Positive windows counted without a noise filter while negatives apply one | 965 "full malignant" windows include 206 that are entirely annotated noise; only 732 are clean | Corrected in §5; script not yet fixed |
+| `rhythm_episodes_total: 488` counts 22 `UNLABELED_START` pseudo-episodes | Real annotated episodes are 466; summing `seconds_by_rhythm` adds 1706.1 s of unannotated recording | Corrected in §3; artifact unchanged |
+| The `rule` string does not mention the end-of-record noise fallback | 29.2% of reported noise seconds are extrapolation, presented as rule-derived | Disclosed in §3; artifact unchanged |
+| `tests/test_vfdb_episodes.py` never exercises the merge step or either `(NOISE` edge case | A regression splitting the 53 merges would pass the suite | Recorded in §3; tests not yet extended |
+
+The suite has never been executed: Windows Smart App Control began blocking this repository's
+Python 3.10 interpreter on 2026-09-10 at 16:06:42, after the artifacts were produced. The
+audit outputs therefore predate the block and are internally consistent with the script as
+shipped; the corrections above live in this document only. **Before any training begins, the
+script must be fixed, the tests extended and executed, and this section reconciled against a
+fresh run.** Until then the artifact JSON and this protocol disagree by design, and this
+protocol is the governing document.
