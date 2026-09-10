@@ -180,15 +180,17 @@ and `results/vfdb_episodes_20260910/`. Every figure below was re-derived indepen
 
 | Defect | Effect | Status |
 |---|---|---|
-| Positive windows counted without a noise filter while negatives apply one | 965 "full malignant" windows include 206 that are entirely annotated noise; only 732 are clean | Corrected in §5; script not yet fixed |
-| `rhythm_episodes_total: 488` counts 22 `UNLABELED_START` pseudo-episodes | Real annotated episodes are 466; summing `seconds_by_rhythm` adds 1706.1 s of unannotated recording | Corrected in §3; artifact unchanged |
-| The `rule` string does not mention the end-of-record noise fallback | 29.2% of reported noise seconds are extrapolation, presented as rule-derived | Disclosed in §3; artifact unchanged |
-| `tests/test_vfdb_episodes.py` never exercises the merge step or either `(NOISE` edge case | A regression splitting the 53 merges would pass the suite | Recorded in §3; tests not yet extended |
+| Positive windows counted without a noise filter while negatives apply one | 965 "full malignant" windows include 206 that are entirely annotated noise; only 732 are clean | **Fixed and re-run.** `clean_windows_*` fields now apply the same rule to both classes |
+| `rhythm_episodes_total: 488` counts 22 `UNLABELED_START` pseudo-episodes | Real annotated episodes are 466; summing `seconds_by_rhythm` adds 1706.1 s of unannotated recording | **Fixed and re-run.** `annotated_rhythm_episodes: 466` added alongside |
+| The `rule` string did not mention the end-of-record noise fallback | 29.2% of reported noise seconds are extrapolation, presented as rule-derived | **Fixed and re-run.** `rule_extrapolation` and `trailing_noise_extrapolation` added |
+| `tests/test_vfdb_episodes.py` never exercised the merge step or either `(NOISE` edge case | A regression splitting the 53 merges would pass the suite | **Fixed.** Five tests added; 9 pass |
 
-The suite has never been executed: Windows Smart App Control began blocking this repository's
-Python 3.10 interpreter on 2026-09-10 at 16:06:42, after the artifacts were produced. The
-audit outputs therefore predate the block and are internally consistent with the script as
-shipped; the corrections above live in this document only. **Before any training begins, the
-script must be fixed, the tests extended and executed, and this section reconciled against a
-fresh run.** Until then the artifact JSON and this protocol disagree by design, and this
-protocol is the governing document.
+Resolved on 2026-09-11. The Smart App Control block that stopped the interpreter on 2026-09-10
+at 16:06:42 cleared overnight, so the script was corrected, re-run, and the artifact now agrees
+with this document on every figure above: 73 noise markers of 592, 466 annotated episodes,
+1771.5 s of trailing extrapolation (29.21% of reported noise), 802 clean positive windows and
+109 clean ambiguous against 1603 clean negatives. Full suite: 53 passed, 2 pre-existing
+`test_embedding_contract.py` errors from torch 2.7's default `weights_only` loader, unchanged
+from before this work.
+
+Still open: the 52 review findings that were never adjudicated (see the lineage report §7).

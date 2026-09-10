@@ -103,8 +103,10 @@ def main():
             for name, labels in TARGET_SETS.items():
                 row[f"{name}_fraction"] = round(sum(frac[k] for k in labels), 4)
             windows.append(row)
+        trailing = (sig_len[rec] - markers[-1][0]) / FS if markers and markers[-1][1] == "NOISE" else 0.0
         per_record.append({"record_id": rec, "markers": len(markers),
                            "noise_spans": len(noise), "noise_s": sum((b - a) for a, b in noise) / FS,
+                           "trailing_noise_extrapolated_s": trailing,
                            "unlabeled_start_s": next((e - s for s, e, l in spans if l == "UNLABELED_START"), 0) / FS,
                            "rhythms": ";".join(sorted({l for _, _, l in spans}))})
     ep = pd.DataFrame(episodes)
@@ -113,19 +115,34 @@ def main():
     win.to_csv(OUT / "window_labels_10s.csv", index=False)
     pd.DataFrame(per_record).to_csv(OUT / "record_summary.csv", index=False)
 
+    # Positives and negatives must be built under the SAME signal-quality rule, or the
+    # reported class ratio is not a like-for-like count. `clean` is that shared rule.
+    clean = (win.noise_fraction == 0) & (win.unlabeled_fraction == 0)
     summary = {}
     for name, labels in TARGET_SETS.items():
         sel = ep[ep.rhythm.isin(labels)]
+        frac = win[f"{name}_fraction"]
+        long_ep = sel[sel.duration_s >= 30]
         summary[name] = {
             "episodes": len(sel),
             "records_with_episode": int(sel.record_id.nunique()),
             "total_seconds": float(sel.duration_s.sum()),
+            "total_seconds_inside_noise": float(sel.noise_s_inside.sum()),
             "median_seconds": float(sel.duration_s.median()) if len(sel) else None,
             "episodes_with_noise_inside": int(sel.contains_noise.sum()),
             "episodes_at_least": {f"{d}s": int((sel.duration_s >= d).sum()) for d in DURATION_GRID_S},
-            "windows_fraction_1.0": int((win[f"{name}_fraction"] >= 0.999).sum()),
-            "windows_fraction_ge_0.5": int((win[f"{name}_fraction"] >= 0.5).sum()),
-            "windows_fraction_between_0_and_0.5": int(((win[f"{name}_fraction"] > 0) & (win[f"{name}_fraction"] < 0.5)).sum()),
+            "episodes_at_least_30s_majority_noise": int(
+                (long_ep.noise_s_inside > long_ep.duration_s / 2).sum()),
+            # Un-filtered counts, kept for continuity with the readiness audit.
+            "windows_fraction_1.0": int((frac >= 0.999).sum()),
+            "windows_fraction_ge_0.5": int((frac >= 0.5).sum()),
+            "windows_fraction_between_0_and_0.5": int(((frac > 0) & (frac < 0.5)).sum()),
+            # Noise/unlabeled-filtered counts — these are the ones comparable to the negatives.
+            "clean_windows_fraction_1.0": int(((frac >= 0.999) & clean).sum()),
+            "clean_windows_fraction_ge_0.5": int(((frac >= 0.5) & clean).sum()),
+            "clean_windows_fraction_between_0_and_0.5": int(((frac > 0) & (frac < 0.5) & clean).sum()),
+            "windows_fraction_1.0_entirely_noise": int(
+                ((frac >= 0.999) & (win.noise_fraction >= 0.999)).sum()),
         }
     negatives = win[(win.dominant_rhythm.isin(["N", "NSR"])) & (win.dominant_fraction >= 0.999)
                     & (win.noise_fraction == 0)]
@@ -133,16 +150,37 @@ def main():
         "status": "episode_and_window_rules_audited_not_a_model_result",
         "time_utc": datetime.now(timezone.utc).isoformat(),
         "rule": "Rhythm marker sets state until next rhythm marker; NOISE keeps the prior rhythm and ends at the next marker; pre-first-marker samples are UNLABELED_START.",
+        "rule_extrapolation": (
+            "The official rule is silent when a NOISE marker is the LAST annotation in a "
+            "record: there is no 'next annotation' for the noise to end at. This "
+            "implementation extends such a span to end-of-record. That is an extrapolation "
+            "beyond the quoted rule, not a reading of it, and the affected records and "
+            "seconds are reported in trailing_noise_extrapolation below."
+        ),
         "records": int(ann.record_id.nunique()), "markers": len(ann),
+        "noise_markers": int((ann.aux_note == "(NOISE").sum()),
+        "rhythm_markers": int((ann.aux_note != "(NOISE").sum()),
         "rhythm_episodes_total": len(ep),
+        "unlabeled_start_pseudo_episodes": int((ep.rhythm == "UNLABELED_START").sum()),
+        "annotated_rhythm_episodes": int((ep.rhythm != "UNLABELED_START").sum()),
         "episodes_by_rhythm": {k: int(v) for k, v in ep.rhythm.value_counts().sort_index().items()},
         "seconds_by_rhythm": {k: float(v) for k, v in ep.groupby("rhythm").duration_s.sum().sort_index().items()},
         "noise_spans": int(sum(r["noise_spans"] for r in per_record)),
         "noise_seconds": float(sum(r["noise_s"] for r in per_record)),
         "records_with_unlabeled_start": int(sum(r["unlabeled_start_s"] > 0 for r in per_record)),
         "unlabeled_start_seconds_total": float(sum(r["unlabeled_start_s"] for r in per_record)),
+        "trailing_noise_extrapolation": {
+            "records": [r["record_id"] for r in per_record if r["trailing_noise_extrapolated_s"] > 0],
+            "seconds": float(sum(r["trailing_noise_extrapolated_s"] for r in per_record)),
+            "share_of_reported_noise_seconds": round(
+                sum(r["trailing_noise_extrapolated_s"] for r in per_record)
+                / sum(r["noise_s"] for r in per_record), 4),
+        },
         "windows_10s_total": len(win),
         "pure_sinus_noise_free_windows": len(negatives),
+        "pure_sinus_noise_free_windows_strict": int(
+            ((win.dominant_rhythm.isin(["N", "NSR"])) & (win.dominant_fraction >= 1.0)
+             & (win.noise_fraction == 0)).sum()),
         "records_with_pure_sinus_windows": int(negatives.record_id.nunique()),
         "target_set_summaries": summary,
         "patient_identity": "VFDB provides no subject identifiers; record-level grouping only, and distinct-subject status across records is unverified.",

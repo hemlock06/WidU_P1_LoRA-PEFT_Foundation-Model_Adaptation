@@ -1,6 +1,6 @@
 {
   "status": "annotation_scope_audited_not_an_evaluation",
-  "time_utc": "2026-09-10T02:23:26.667099+00:00",
+  "time_utc": "2026-09-10T16:03:42.729811+00:00",
   "original_records": 75,
   "original_patients": 32,
   "official_sha256_verified_files": 150,
@@ -54,7 +54,44 @@
     "I50",
     "I71"
   ],
-  "challenge_pvc_records": 0,
+  "challenge_ventricular_ectopy_records": 59,
+  "st_change_records_by_description": [
+    "I03",
+    "I06",
+    "I12",
+    "I15",
+    "I24",
+    "I40",
+    "I50",
+    "I59",
+    "I60",
+    "I62"
+  ],
+  "st_change_records_by_challenge_code": [
+    "I03",
+    "I06",
+    "I12",
+    "I15",
+    "I24",
+    "I40",
+    "I50",
+    "I59",
+    "I60",
+    "I62"
+  ],
+  "st_change_routes_agree": true,
+  "st_change_patients": [
+    2,
+    3,
+    6,
+    7,
+    11,
+    18,
+    22,
+    26,
+    27
+  ],
+  "st_change_patient_count": 9,
   "challenge_bbb_records": [
     "I16",
     "I17",
@@ -98,5 +135,5 @@
   ],
   "new_inference_runs": 0,
   "new_training_runs": 0,
-  "script_sha256": "6abdb92f69084a4ed7494fa640e053c89543cbd8fc67ec7bb842433dd2e48d31"
+  "script_sha256": "d847123c9e68dbab71ca31d9a9188279709e129f6f185b2945334b30e64feb6c"
 }

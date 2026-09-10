@@ -240,7 +240,18 @@ def main():
 
     chal_af = table[table.challenge_dx_names.str.contains(r"\bAF\b|PAF", regex=True)].index.tolist()
     ann_af = table[table.rhythm_labels.str.contains(r"\(AFIB|\(WPWAF", regex=True)].index.tolist()
-    chal_pvc = table[table.challenge_dx_names.str.contains(r"\bPVC\b", regex=True)].index.tolist()
+    # The Challenge abbreviations for ventricular ectopy are VEB/VPVC, not PVC; matching only
+    # "PVC" returned 0 and read as an absence rather than as a pattern that never matches.
+    chal_pvc = table[
+        table.challenge_dx_names.str.contains(r"\bPVC\b|\bVEB\b|\bVPVC\b", regex=True)
+    ].index.tolist()
+    # ST change has no time-stamped annotation; it exists as record-level free text and as
+    # record-level Challenge codes. Both routes are computed so the count is reproducible.
+    st_text = table[table.record_description.str.contains("ST", na=False)].index.tolist()
+    st_codes = table[
+        table.challenge_dx_names.str.contains(r"\bSTD\b|\bSTE\b|STIAb", regex=True)
+    ].index.tolist()
+    st_patients = sorted({int(table.loc[r, "patient"]) for r in st_text})
     chal_bbb = table[table.challenge_dx_names.str.contains("BBB", regex=False)].index.tolist()
     age_mismatch = [r for r in chal_to_orig.values()
                     if str(table.loc[r, "age"]) != str(table.loc[r, "challenge_age"])]
@@ -266,7 +277,12 @@ def main():
         "afib_partial_windows": {r: int(table.loc[r, "windows_afib_partial"]) for r in ann_af},
         "afib_full_windows": {r: int(table.loc[r, "windows_afib_full"]) for r in ann_af},
         "challenge_af_or_paf_records": chal_af,
-        "challenge_pvc_records": len(chal_pvc),
+        "challenge_ventricular_ectopy_records": len(chal_pvc),
+        "st_change_records_by_description": st_text,
+        "st_change_records_by_challenge_code": st_codes,
+        "st_change_routes_agree": sorted(st_text) == sorted(st_codes),
+        "st_change_patients": st_patients,
+        "st_change_patient_count": len(st_patients),
         "challenge_bbb_records": chal_bbb,
         "challenge_vs_original_age_mismatch": age_mismatch,
         "challenge_vs_original_sex_mismatch": sex_mismatch,

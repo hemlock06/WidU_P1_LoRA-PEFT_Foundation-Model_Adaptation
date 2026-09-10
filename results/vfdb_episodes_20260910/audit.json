@@ -1,10 +1,15 @@
 {
   "status": "episode_and_window_rules_audited_not_a_model_result",
-  "time_utc": "2026-09-10T02:28:31.229834+00:00",
+  "time_utc": "2026-09-10T16:03:01.168964+00:00",
   "rule": "Rhythm marker sets state until next rhythm marker; NOISE keeps the prior rhythm and ends at the next marker; pre-first-marker samples are UNLABELED_START.",
+  "rule_extrapolation": "The official rule is silent when a NOISE marker is the LAST annotation in a record: there is no 'next annotation' for the noise to end at. This implementation extends such a span to end-of-record. That is an extrapolation beyond the quoted rule, not a reading of it, and the affected records and seconds are reported in trailing_noise_extrapolation below.",
   "records": 22,
   "markers": 592,
+  "noise_markers": 73,
+  "rhythm_markers": 519,
   "rhythm_episodes_total": 488,
+  "unlabeled_start_pseudo_episodes": 22,
+  "annotated_rhythm_episodes": 466,
   "episodes_by_rhythm": {
     "AFIB": 9,
     "ASYS": 12,
@@ -47,14 +52,28 @@
   "noise_seconds": 6064.856,
   "records_with_unlabeled_start": 22,
   "unlabeled_start_seconds_total": 1706.076,
+  "trailing_noise_extrapolation": {
+    "records": [
+      "419",
+      "420",
+      "422",
+      "423",
+      "424",
+      "605"
+    ],
+    "seconds": 1771.4719999999998,
+    "share_of_reported_noise_seconds": 0.2921
+  },
   "windows_10s_total": 4620,
   "pure_sinus_noise_free_windows": 1603,
+  "pure_sinus_noise_free_windows_strict": 1602,
   "records_with_pure_sinus_windows": 15,
   "target_set_summaries": {
     "VT_only": {
       "episodes": 90,
       "records_with_episode": 19,
       "total_seconds": 6203.063999999999,
+      "total_seconds_inside_noise": 963.08,
       "median_seconds": 4.038,
       "episodes_with_noise_inside": 7,
       "episodes_at_least": {
@@ -63,14 +82,20 @@
         "10s": 21,
         "30s": 15
       },
+      "episodes_at_least_30s_majority_noise": 4,
       "windows_fraction_1.0": 579,
       "windows_fraction_ge_0.5": 623,
-      "windows_fraction_between_0_and_0.5": 43
+      "windows_fraction_between_0_and_0.5": 43,
+      "clean_windows_fraction_1.0": 478,
+      "clean_windows_fraction_ge_0.5": 519,
+      "clean_windows_fraction_between_0_and_0.5": 38,
+      "windows_fraction_1.0_entirely_noise": 91
     },
     "VF_VFIB_VFL": {
       "episodes": 105,
       "records_with_episode": 8,
       "total_seconds": 4269.708,
+      "total_seconds_inside_noise": 1255.58,
       "median_seconds": 2.924,
       "episodes_with_noise_inside": 9,
       "episodes_at_least": {
@@ -79,14 +104,20 @@
         "10s": 18,
         "30s": 16
       },
+      "episodes_at_least_30s_majority_noise": 3,
       "windows_fraction_1.0": 385,
       "windows_fraction_ge_0.5": 416,
-      "windows_fraction_between_0_and_0.5": 76
+      "windows_fraction_between_0_and_0.5": 76,
+      "clean_windows_fraction_1.0": 254,
+      "clean_windows_fraction_ge_0.5": 283,
+      "clean_windows_fraction_between_0_and_0.5": 71,
+      "windows_fraction_1.0_entirely_noise": 115
     },
     "malignant_ventricular_VT_VFL_VF_VFIB": {
       "episodes": 195,
       "records_with_episode": 22,
       "total_seconds": 10472.772,
+      "total_seconds_inside_noise": 2218.66,
       "median_seconds": 3.384,
       "episodes_with_noise_inside": 16,
       "episodes_at_least": {
@@ -95,14 +126,20 @@
         "10s": 39,
         "30s": 31
       },
+      "episodes_at_least_30s_majority_noise": 7,
       "windows_fraction_1.0": 965,
       "windows_fraction_ge_0.5": 1039,
-      "windows_fraction_between_0_and_0.5": 118
+      "windows_fraction_between_0_and_0.5": 118,
+      "clean_windows_fraction_1.0": 732,
+      "clean_windows_fraction_ge_0.5": 802,
+      "clean_windows_fraction_between_0_and_0.5": 109,
+      "windows_fraction_1.0_entirely_noise": 206
     },
     "ASYS_only": {
       "episodes": 12,
       "records_with_episode": 6,
       "total_seconds": 795.28,
+      "total_seconds_inside_noise": 3.228,
       "median_seconds": 11.424,
       "episodes_with_noise_inside": 1,
       "episodes_at_least": {
@@ -111,9 +148,14 @@
         "10s": 8,
         "30s": 3
       },
+      "episodes_at_least_30s_majority_noise": 0,
       "windows_fraction_1.0": 70,
       "windows_fraction_ge_0.5": 78,
-      "windows_fraction_between_0_and_0.5": 13
+      "windows_fraction_between_0_and_0.5": 13,
+      "clean_windows_fraction_1.0": 69,
+      "clean_windows_fraction_ge_0.5": 75,
+      "clean_windows_fraction_between_0_and_0.5": 12,
+      "windows_fraction_1.0_entirely_noise": 0
     }
   },
   "patient_identity": "VFDB provides no subject identifiers; record-level grouping only, and distinct-subject status across records is unverified.",
@@ -127,7 +169,7 @@
     "raw_annotations.csv": "12a8cd171a057c68e2d6a86e0abed753bd1aff8f4b7bbbd20a9c20b0fdf4a759",
     "record_inventory.csv": "2ec481544d0d9c1a7ed77dfc011acb5e3cda05b701061a868a33942045ab86e2"
   },
-  "script_sha256": "6881479b78c327614639e89c8b42fa28f7e852110f61fcf816c4681396cc14c2",
+  "script_sha256": "6e123d75314d8a4c04edac8dc3078b29f6a560d22a908195ec76aecd49b3c82c",
   "model_inferences": 0,
   "new_training_runs": 0
 }

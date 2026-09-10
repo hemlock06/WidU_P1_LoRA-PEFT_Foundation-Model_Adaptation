@@ -138,21 +138,25 @@ being accepted**, not taken on the reviewer's word:
 | Analysis 1 decision statistic | "stably" undefined | **mean ≥ 0.50 and min ≥ 0.50 over ten seeds** | validation protocol §9 |
 | INCART amplitude precedent | read as an amplitude warning | **corrected to what §⑪ concluded** | validation protocol §6 |
 
-**Known defects left in the shipped scripts, not yet fixed:**
+**Script defects found, fixed and re-run on 2026-09-11:**
 
-- `audit_incart_annotations.py` reports `challenge_pvc_records: 0`. That is a regex artifact:
-  the Challenge headers use `VEB`/`VPVC`, not `PVC`, and **59** of the 74 records carry a
-  ventricular-ectopy code. The zero must not be read as an absence.
-- The same script computes no ST record or patient count, so the ST figures in §6 are
-  recomputed here rather than produced by the audit.
-- `audit_vfdb_episodes.py` counts positive windows without the noise filter it applies to
-  negatives, counts 22 `UNLABELED_START` pseudo-episodes inside `rhythm_episodes_total`, and
-  does not disclose its end-of-record noise fallback in the `rule` string. All three are
-  itemised in the emergency-rhythm protocol §7.
+- `audit_incart_annotations.py` reported `challenge_pvc_records: 0`. That was a regex artifact:
+  the Challenge headers use `VEB`/`VPVC`, not `PVC`. The field is now
+  `challenge_ventricular_ectopy_records: 59`. A zero that means "the pattern never matches"
+  must not be shipped looking like an absence.
+- The same script computed no ST record or patient count, so the §6 figures had no derivation.
+  It now emits both routes and their agreement: `st_change_records_by_description` and
+  `st_change_records_by_challenge_code` select the identical 10 records
+  (`st_change_routes_agree: true`) over `st_change_patient_count: 9`.
+- `audit_vfdb_episodes.py` counted positive windows without the noise filter it applied to
+  negatives, counted 22 `UNLABELED_START` pseudo-episodes inside `rhythm_episodes_total`, and
+  did not disclose its end-of-record noise fallback. All three are fixed; the emergency-rhythm
+  protocol §7 carries the reconciled figures.
 
-These are recorded rather than patched because the interpreter that produces these artefacts is
-blocked (§8), so a script edit could not be re-run and would leave code and output disagreeing
-with no way to tell which is current.
+The Smart App Control block described in §8 cleared overnight, which is what made the fixes
+verifiable rather than merely written. Both audits were re-run and their previously verified
+figures are unchanged: the INCART replay still reproduces 7811 windows as 540 and 7271, and the
+PTB-XL cohort filters still give 2146 / 1685 / 1684 / 1682.
 
 **The 52 unmeasured findings are unresolved, not dismissed.** They are preserved in the
 workflow transcript at `subagents/workflows/wf_71c343ec-5cd/journal.jsonl` and must be
