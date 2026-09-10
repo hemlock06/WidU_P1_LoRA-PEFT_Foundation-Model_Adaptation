@@ -1,0 +1,102 @@
+{
+  "status": "annotation_scope_audited_not_an_evaluation",
+  "time_utc": "2026-09-10T02:23:26.667099+00:00",
+  "original_records": 75,
+  "original_patients": 32,
+  "official_sha256_verified_files": 150,
+  "challenge_records": 74,
+  "missing_from_challenge": [
+    "I36"
+  ],
+  "missing_from_challenge_patient": [
+    16
+  ],
+  "record_seconds": [
+    1800.0
+  ],
+  "total_seconds": 135000.0,
+  "adc_gain_range": [
+    240,
+    1063
+  ],
+  "total_annotations": 175919,
+  "beat_symbol_totals": {
+    "N": 150410,
+    "V": 20013,
+    "A": 1944,
+    "F": 219,
+    "R": 3174,
+    "L": 0
+  },
+  "rhythm_marker_records": 6,
+  "rhythm_labels_observed": [
+    "(AFIB",
+    "(PREX",
+    "(WPWAF"
+  ],
+  "afib_records_by_annotation": [
+    "I49",
+    "I50",
+    "I71"
+  ],
+  "afib_partial_windows": {
+    "I49": 1,
+    "I50": 1,
+    "I71": 5
+  },
+  "afib_full_windows": {
+    "I49": 179,
+    "I50": 179,
+    "I71": 11
+  },
+  "challenge_af_or_paf_records": [
+    "I49",
+    "I50",
+    "I71"
+  ],
+  "challenge_pvc_records": 0,
+  "challenge_bbb_records": [
+    "I16",
+    "I17",
+    "I71"
+  ],
+  "challenge_vs_original_age_mismatch": [],
+  "challenge_vs_original_sex_mismatch": [],
+  "historical_preprocess_replay": {
+    "afib_records": [
+      "I49",
+      "I50",
+      "I71"
+    ],
+    "afib_windows": 540,
+    "normal_candidate_records": 69,
+    "normal_windows": 7271,
+    "excluded_records": [
+      "I68",
+      "I69",
+      "I70"
+    ],
+    "total_windows": 7811,
+    "matches_recorded_7811_540_7271": true,
+    "patients_in_afib_records": [
+      22,
+      30
+    ],
+    "patients_in_normal_records": 29
+  },
+  "four_group_label_availability": {
+    "af": "temporal rhythm markers '(AFIB'/'(WPWAF' in .atr; window-level derivable",
+    "ectopy": "beat-level V/A symbols in .atr; window-level derivable",
+    "conduction": "no 1AVB/BBB rhythm markers; only record descriptions and beat symbols R/L if present",
+    "st_change": "record descriptions only (ST elevation/depression text); no time-stamped ST annotations"
+  },
+  "limitations": [
+    "Waveform .dat files were not downloaded here; prior windows are replayed from annotations only.",
+    "Record descriptions are free text at record level, not time-resolved labels.",
+    "Beat annotation locations were not manually corrected per the official README.",
+    "No model outputs were inspected."
+  ],
+  "new_inference_runs": 0,
+  "new_training_runs": 0,
+  "script_sha256": "6abdb92f69084a4ed7494fa640e053c89543cbd8fc67ec7bb842433dd2e48d31"
+}

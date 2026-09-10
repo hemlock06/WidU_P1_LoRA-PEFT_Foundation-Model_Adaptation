@@ -1,0 +1,133 @@
+{
+  "status": "episode_and_window_rules_audited_not_a_model_result",
+  "time_utc": "2026-09-10T02:28:31.229834+00:00",
+  "rule": "Rhythm marker sets state until next rhythm marker; NOISE keeps the prior rhythm and ends at the next marker; pre-first-marker samples are UNLABELED_START.",
+  "records": 22,
+  "markers": 592,
+  "rhythm_episodes_total": 488,
+  "episodes_by_rhythm": {
+    "AFIB": 9,
+    "ASYS": 12,
+    "B": 12,
+    "BI": 13,
+    "HGEA": 19,
+    "N": 182,
+    "NOD": 6,
+    "NSR": 2,
+    "PM": 5,
+    "SBR": 2,
+    "SVTA": 6,
+    "UNLABELED_START": 22,
+    "VER": 3,
+    "VF": 8,
+    "VFIB": 2,
+    "VFL": 95,
+    "VT": 90
+  },
+  "seconds_by_rhythm": {
+    "AFIB": 3643.62,
+    "ASYS": 795.28,
+    "B": 507.73199999999997,
+    "BI": 4443.028,
+    "HGEA": 945.972,
+    "N": 18371.232,
+    "NOD": 1763.1480000000001,
+    "NSR": 486.696,
+    "PM": 1468.896,
+    "SBR": 32.38,
+    "SVTA": 1508.324,
+    "UNLABELED_START": 1706.076,
+    "VER": 54.844,
+    "VF": 2103.092,
+    "VFIB": 676.3879999999999,
+    "VFL": 1490.228,
+    "VT": 6203.064
+  },
+  "noise_spans": 73,
+  "noise_seconds": 6064.856,
+  "records_with_unlabeled_start": 22,
+  "unlabeled_start_seconds_total": 1706.076,
+  "windows_10s_total": 4620,
+  "pure_sinus_noise_free_windows": 1603,
+  "records_with_pure_sinus_windows": 15,
+  "target_set_summaries": {
+    "VT_only": {
+      "episodes": 90,
+      "records_with_episode": 19,
+      "total_seconds": 6203.063999999999,
+      "median_seconds": 4.038,
+      "episodes_with_noise_inside": 7,
+      "episodes_at_least": {
+        "2s": 76,
+        "5s": 40,
+        "10s": 21,
+        "30s": 15
+      },
+      "windows_fraction_1.0": 579,
+      "windows_fraction_ge_0.5": 623,
+      "windows_fraction_between_0_and_0.5": 43
+    },
+    "VF_VFIB_VFL": {
+      "episodes": 105,
+      "records_with_episode": 8,
+      "total_seconds": 4269.708,
+      "median_seconds": 2.924,
+      "episodes_with_noise_inside": 9,
+      "episodes_at_least": {
+        "2s": 69,
+        "5s": 35,
+        "10s": 18,
+        "30s": 16
+      },
+      "windows_fraction_1.0": 385,
+      "windows_fraction_ge_0.5": 416,
+      "windows_fraction_between_0_and_0.5": 76
+    },
+    "malignant_ventricular_VT_VFL_VF_VFIB": {
+      "episodes": 195,
+      "records_with_episode": 22,
+      "total_seconds": 10472.772,
+      "median_seconds": 3.384,
+      "episodes_with_noise_inside": 16,
+      "episodes_at_least": {
+        "2s": 145,
+        "5s": 75,
+        "10s": 39,
+        "30s": 31
+      },
+      "windows_fraction_1.0": 965,
+      "windows_fraction_ge_0.5": 1039,
+      "windows_fraction_between_0_and_0.5": 118
+    },
+    "ASYS_only": {
+      "episodes": 12,
+      "records_with_episode": 6,
+      "total_seconds": 795.28,
+      "median_seconds": 11.424,
+      "episodes_with_noise_inside": 1,
+      "episodes_at_least": {
+        "2s": 11,
+        "5s": 9,
+        "10s": 8,
+        "30s": 3
+      },
+      "windows_fraction_1.0": 70,
+      "windows_fraction_ge_0.5": 78,
+      "windows_fraction_between_0_and_0.5": 13
+    }
+  },
+  "patient_identity": "VFDB provides no subject identifiers; record-level grouping only, and distinct-subject status across records is unverified.",
+  "limitations": [
+    "Marker-derived episodes are not adjudicated clinical events.",
+    "Window fractions depend on the fixed 10 s grid; other grids change counts.",
+    "Generic ECG/ECG channels cannot be mapped to standard leads.",
+    "No pulse/hemodynamic information: VT here is an ECG rhythm label only."
+  ],
+  "source_hashes": {
+    "raw_annotations.csv": "12a8cd171a057c68e2d6a86e0abed753bd1aff8f4b7bbbd20a9c20b0fdf4a759",
+    "record_inventory.csv": "2ec481544d0d9c1a7ed77dfc011acb5e3cda05b701061a868a33942045ab86e2"
+  },
+  "script_sha256": "6881479b78c327614639e89c8b42fa28f7e852110f61fcf816c4681396cc14c2",
+  "model_inferences": 0,
+  "new_training_runs": 0
+}

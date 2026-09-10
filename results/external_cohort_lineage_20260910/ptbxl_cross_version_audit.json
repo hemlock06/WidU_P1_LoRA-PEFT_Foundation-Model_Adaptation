@@ -1,0 +1,620 @@
+{
+  "status": "cross_version_and_duplicate_exposure_audited_not_an_evaluation",
+  "time_utc": "2026-09-10T02:24:57.011336+00:00",
+  "v101_records": 21837,
+  "v103_records": 21799,
+  "v103_patients": 18869,
+  "dropped_records": [
+    137,
+    139,
+    140,
+    141,
+    142,
+    143,
+    145,
+    456,
+    458,
+    459,
+    461,
+    462,
+    2506,
+    2511,
+    3795,
+    3798,
+    3800,
+    3801,
+    3832,
+    5817,
+    7777,
+    7779,
+    7782,
+    9821,
+    9825,
+    9888,
+    11810,
+    11814,
+    11815,
+    11817,
+    11838,
+    13791,
+    13793,
+    13796,
+    13797,
+    13799,
+    15742,
+    18150
+  ],
+  "dropped_count": 38,
+  "dropped_in_v102_changelog": 36,
+  "dropped_only_in_v103_changelog": [
+    3801,
+    11815
+  ],
+  "drop_reason": "identical raw waveform duplicates/triplicates per official changelogs",
+  "dropped_same_patient_as_kept_partner": 20,
+  "dropped_different_patient_than_kept_partner": [
+    139,
+    140,
+    141,
+    142,
+    145,
+    458,
+    461,
+    462,
+    2511,
+    3800,
+    3832,
+    5817,
+    9825,
+    9888,
+    11810,
+    11817,
+    13796,
+    15742
+  ],
+  "surviving_patient_id_changed_between_versions": [],
+  "surviving_strat_fold_changed_between_versions": [],
+  "published_split_ptbxl_rows": 21836,
+  "challenge_hr_ids_absent_from_published_split": [
+    12722
+  ],
+  "dropped_records_published_split": {
+    "test": 4,
+    "train": 29,
+    "valid": 5
+  },
+  "kept_partner_split_vs_dropped_split": [
+    {
+      "dropped": 137,
+      "dropped_split": "test",
+      "kept": 138,
+      "kept_split": "train",
+      "dropped_patient_v101": 8727.0,
+      "kept_patient_v103": 8727.0
+    },
+    {
+      "dropped": 139,
+      "dropped_split": "train",
+      "kept": 7781,
+      "kept_split": "valid",
+      "dropped_patient_v101": 11121.0,
+      "kept_patient_v103": 11119.0
+    },
+    {
+      "dropped": 140,
+      "dropped_split": "train",
+      "kept": 1370,
+      "kept_split": "train",
+      "dropped_patient_v101": 13451.0,
+      "kept_patient_v103": 13446.0
+    },
+    {
+      "dropped": 141,
+      "dropped_split": "train",
+      "kept": 2509,
+      "kept_split": "train",
+      "dropped_patient_v101": 16722.0,
+      "kept_patient_v103": 16689.0
+    },
+    {
+      "dropped": 142,
+      "dropped_split": "train",
+      "kept": 13803,
+      "kept_split": "test",
+      "dropped_patient_v101": 8159.0,
+      "kept_patient_v103": 8122.0
+    },
+    {
+      "dropped": 143,
+      "dropped_split": "train",
+      "kept": 144,
+      "kept_split": "train",
+      "dropped_patient_v101": 16914.0,
+      "kept_patient_v103": 16914.0
+    },
+    {
+      "dropped": 145,
+      "dropped_split": "train",
+      "kept": 463,
+      "kept_split": "train",
+      "dropped_patient_v101": 16690.0,
+      "kept_patient_v103": 16723.0
+    },
+    {
+      "dropped": 456,
+      "dropped_split": "train",
+      "kept": 457,
+      "kept_split": "valid",
+      "dropped_patient_v101": 16773.0,
+      "kept_patient_v103": 16773.0
+    },
+    {
+      "dropped": 458,
+      "dropped_split": "valid",
+      "kept": 3797,
+      "kept_split": "train",
+      "dropped_patient_v101": 19497.0,
+      "kept_patient_v103": 19499.0
+    },
+    {
+      "dropped": 459,
+      "dropped_split": "train",
+      "kept": 460,
+      "kept_split": "train",
+      "dropped_patient_v101": 19795.0,
+      "kept_patient_v103": 19795.0
+    },
+    {
+      "dropped": 461,
+      "dropped_split": "train",
+      "kept": 9823,
+      "kept_split": "train",
+      "dropped_patient_v101": 16942.0,
+      "kept_patient_v103": 16921.0
+    },
+    {
+      "dropped": 462,
+      "dropped_split": "train",
+      "kept": 13802,
+      "kept_split": "train",
+      "dropped_patient_v101": 19466.0,
+      "kept_patient_v103": 19463.0
+    },
+    {
+      "dropped": 2506,
+      "dropped_split": "train",
+      "kept": 2507,
+      "kept_split": "test",
+      "dropped_patient_v101": 19468.0,
+      "kept_patient_v103": 19468.0
+    },
+    {
+      "dropped": 2511,
+      "dropped_split": "train",
+      "kept": 7784,
+      "kept_split": "train",
+      "dropped_patient_v101": 12908.0,
+      "kept_patient_v103": 12906.0
+    },
+    {
+      "dropped": 3795,
+      "dropped_split": "train",
+      "kept": 3796,
+      "kept_split": "train",
+      "dropped_patient_v101": 8703.0,
+      "kept_patient_v103": 8703.0
+    },
+    {
+      "dropped": 3798,
+      "dropped_split": "valid",
+      "kept": 3799,
+      "kept_split": "train",
+      "dropped_patient_v101": 17602.0,
+      "kept_patient_v103": 17602.0
+    },
+    {
+      "dropped": 3800,
+      "dropped_split": "valid",
+      "kept": 3802,
+      "kept_split": "train",
+      "dropped_patient_v101": 20052.0,
+      "kept_patient_v103": 20054.0
+    },
+    {
+      "dropped": 3801,
+      "dropped_split": "train",
+      "kept": 3802,
+      "kept_split": "train",
+      "dropped_patient_v101": 20054.0,
+      "kept_patient_v103": 20054.0
+    },
+    {
+      "dropped": 3832,
+      "dropped_split": "train",
+      "kept": 15768,
+      "kept_split": "train",
+      "dropped_patient_v101": 1254.0,
+      "kept_patient_v103": 6200.0
+    },
+    {
+      "dropped": 5817,
+      "dropped_split": "train",
+      "kept": 9824,
+      "kept_split": "train",
+      "dropped_patient_v101": 10666.0,
+      "kept_patient_v103": 10683.0
+    },
+    {
+      "dropped": 7777,
+      "dropped_split": "train",
+      "kept": 7778,
+      "kept_split": "train",
+      "dropped_patient_v101": 14938.0,
+      "kept_patient_v103": 14938.0
+    },
+    {
+      "dropped": 7779,
+      "dropped_split": "valid",
+      "kept": 7780,
+      "kept_split": "train",
+      "dropped_patient_v101": 8978.0,
+      "kept_patient_v103": 8978.0
+    },
+    {
+      "dropped": 7782,
+      "dropped_split": "train",
+      "kept": 7783,
+      "kept_split": "train",
+      "dropped_patient_v101": 14850.0,
+      "kept_patient_v103": 14850.0
+    },
+    {
+      "dropped": 9821,
+      "dropped_split": "train",
+      "kept": 9822,
+      "kept_split": "train",
+      "dropped_patient_v101": 19448.0,
+      "kept_patient_v103": 19448.0
+    },
+    {
+      "dropped": 9825,
+      "dropped_split": "test",
+      "kept": 11813,
+      "kept_split": "train",
+      "dropped_patient_v101": 20059.0,
+      "kept_patient_v103": 20071.0
+    },
+    {
+      "dropped": 9888,
+      "dropped_split": "train",
+      "kept": 9889,
+      "kept_split": "valid",
+      "dropped_patient_v101": 15503.0,
+      "kept_patient_v103": 8026.0
+    },
+    {
+      "dropped": 11810,
+      "dropped_split": "train",
+      "kept": 15741,
+      "kept_split": "test",
+      "dropped_patient_v101": 17265.0,
+      "kept_patient_v103": 17273.0
+    },
+    {
+      "dropped": 11814,
+      "dropped_split": "train",
+      "kept": 11816,
+      "kept_split": "train",
+      "dropped_patient_v101": 11118.0,
+      "kept_patient_v103": 11118.0
+    },
+    {
+      "dropped": 11815,
+      "dropped_split": "train",
+      "kept": 11816,
+      "kept_split": "train",
+      "dropped_patient_v101": 11118.0,
+      "kept_patient_v103": 11118.0
+    },
+    {
+      "dropped": 11817,
+      "dropped_split": "valid",
+      "kept": 146,
+      "kept_split": "train",
+      "dropped_patient_v101": 13452.0,
+      "kept_patient_v103": 13447.0
+    },
+    {
+      "dropped": 11838,
+      "dropped_split": "train",
+      "kept": 11839,
+      "kept_split": "train",
+      "dropped_patient_v101": 15034.0,
+      "kept_patient_v103": 15034.0
+    },
+    {
+      "dropped": 13791,
+      "dropped_split": "train",
+      "kept": 13792,
+      "kept_split": "train",
+      "dropped_patient_v101": 20806.0,
+      "kept_patient_v103": 20806.0
+    },
+    {
+      "dropped": 13793,
+      "dropped_split": "test",
+      "kept": 13794,
+      "kept_split": "train",
+      "dropped_patient_v101": 9696.0,
+      "kept_patient_v103": 9696.0
+    },
+    {
+      "dropped": 13796,
+      "dropped_split": "train",
+      "kept": 1371,
+      "kept_split": "valid",
+      "dropped_patient_v101": 15063.0,
+      "kept_patient_v103": 15038.0
+    },
+    {
+      "dropped": 13797,
+      "dropped_split": "test",
+      "kept": 13798,
+      "kept_split": "valid",
+      "dropped_patient_v101": 8715.0,
+      "kept_patient_v103": 8715.0
+    },
+    {
+      "dropped": 13799,
+      "dropped_split": "train",
+      "kept": 13800,
+      "kept_split": "train",
+      "dropped_patient_v101": 11122.0,
+      "kept_patient_v103": 11122.0
+    },
+    {
+      "dropped": 15742,
+      "dropped_split": "train",
+      "kept": 11809,
+      "kept_split": "train",
+      "dropped_patient_v101": 10662.0,
+      "kept_patient_v103": 10664.0
+    },
+    {
+      "dropped": 18150,
+      "dropped_split": "train",
+      "kept": 18151,
+      "kept_split": "train",
+      "dropped_patient_v101": 612.0,
+      "kept_patient_v103": 612.0
+    }
+  ],
+  "cohort_filters": {
+    "F0_own_record_published_test": {
+      "records": 2146,
+      "patients": 2118
+    },
+    "F1_all_current_v103_patient_records_test": {
+      "records": 1685,
+      "patients": 1676
+    },
+    "F2_all_v101_history_patient_records_test": {
+      "records": 1684,
+      "patients": 1675
+    },
+    "F3_no_identical_waveform_partner_in_train_or_valid": {
+      "records": 1682,
+      "patients": 1673
+    },
+    "removed_F1_to_F2_by_dropped_history": {
+      "records": 1,
+      "patients": 1
+    },
+    "removed_F2_to_F3_by_duplicate_partner": {
+      "records": 2,
+      "patients": 2
+    },
+    "F3_records_with_identical_partner_in_test": 0
+  },
+  "label_presence_under_mapping_proposals": {
+    "all_v103/diag_likelihood_min_1": {
+      "records": 21799,
+      "group_presence": {
+        "normal": 9514,
+        "other_rhythm": 2859,
+        "af": 1514,
+        "other_cd": 3663,
+        "conduction_restricted": 1705,
+        "ectopy": 1484,
+        "st_change_surrogate": 1033
+      },
+      "exclusive_priority_counts": {
+        "-1": 7875,
+        "0": 9073,
+        "1": 1303,
+        "2": 1033,
+        "3": 1507,
+        "4": 1008
+      }
+    },
+    "all_v103/diag_likelihood_min_50": {
+      "records": 21799,
+      "group_presence": {
+        "normal": 9438,
+        "other_rhythm": 2859,
+        "af": 1514,
+        "other_cd": 3660,
+        "conduction_restricted": 1701,
+        "ectopy": 1484,
+        "st_change_surrogate": 1033
+      },
+      "exclusive_priority_counts": {
+        "-1": 7941,
+        "0": 9010,
+        "1": 1303,
+        "2": 1033,
+        "3": 1503,
+        "4": 1009
+      }
+    },
+    "all_v103/diag_likelihood_min_100": {
+      "records": 21799,
+      "group_presence": {
+        "normal": 7172,
+        "other_rhythm": 2859,
+        "af": 1514,
+        "other_cd": 3555,
+        "conduction_restricted": 1688,
+        "ectopy": 1484,
+        "st_change_surrogate": 1033
+      },
+      "exclusive_priority_counts": {
+        "-1": 9900,
+        "0": 7062,
+        "1": 1303,
+        "2": 1033,
+        "3": 1492,
+        "4": 1009
+      }
+    },
+    "F0_test/diag_likelihood_min_1": {
+      "records": 2146,
+      "group_presence": {
+        "normal": 960,
+        "other_rhythm": 269,
+        "other_cd": 360,
+        "ectopy": 137,
+        "conduction_restricted": 172,
+        "st_change_surrogate": 113,
+        "af": 151
+      },
+      "exclusive_priority_counts": {
+        "-1": 752,
+        "0": 913,
+        "1": 130,
+        "2": 113,
+        "3": 150,
+        "4": 88
+      }
+    },
+    "F0_test/diag_likelihood_min_50": {
+      "records": 2146,
+      "group_presence": {
+        "normal": 950,
+        "other_rhythm": 269,
+        "other_cd": 360,
+        "ectopy": 137,
+        "conduction_restricted": 171,
+        "st_change_surrogate": 113,
+        "af": 151
+      },
+      "exclusive_priority_counts": {
+        "-1": 763,
+        "0": 903,
+        "1": 130,
+        "2": 113,
+        "3": 149,
+        "4": 88
+      }
+    },
+    "F0_test/diag_likelihood_min_100": {
+      "records": 2146,
+      "group_presence": {
+        "normal": 722,
+        "other_rhythm": 269,
+        "other_cd": 349,
+        "ectopy": 137,
+        "conduction_restricted": 170,
+        "st_change_surrogate": 113,
+        "af": 151
+      },
+      "exclusive_priority_counts": {
+        "-1": 957,
+        "0": 710,
+        "1": 130,
+        "2": 113,
+        "3": 148,
+        "4": 88
+      }
+    },
+    "F3_eligible/diag_likelihood_min_1": {
+      "records": 1682,
+      "group_presence": {
+        "normal": 839,
+        "other_rhythm": 189,
+        "other_cd": 268,
+        "conduction_restricted": 111,
+        "ectopy": 95,
+        "st_change_surrogate": 93,
+        "af": 91
+      },
+      "exclusive_priority_counts": {
+        "-1": 558,
+        "0": 802,
+        "1": 71,
+        "2": 93,
+        "3": 99,
+        "4": 59
+      }
+    },
+    "F3_eligible/diag_likelihood_min_50": {
+      "records": 1682,
+      "group_presence": {
+        "normal": 834,
+        "other_rhythm": 189,
+        "other_cd": 268,
+        "conduction_restricted": 111,
+        "ectopy": 95,
+        "st_change_surrogate": 93,
+        "af": 91
+      },
+      "exclusive_priority_counts": {
+        "-1": 563,
+        "0": 797,
+        "1": 71,
+        "2": 93,
+        "3": 99,
+        "4": 59
+      }
+    },
+    "F3_eligible/diag_likelihood_min_100": {
+      "records": 1682,
+      "group_presence": {
+        "normal": 633,
+        "other_rhythm": 189,
+        "other_cd": 259,
+        "conduction_restricted": 111,
+        "ectopy": 95,
+        "st_change_surrogate": 93,
+        "af": 91
+      },
+      "exclusive_priority_counts": {
+        "-1": 735,
+        "0": 625,
+        "1": 71,
+        "2": 93,
+        "3": 99,
+        "4": 59
+      }
+    }
+  },
+  "waveform_identity_sample": {
+    "n_compared": 47,
+    "same_id_pairs": 40,
+    "dropped_vs_kept_pairs": 7,
+    "digital_identical": 47,
+    "gain_and_lead_match": 47,
+    "age_match": 47,
+    "sex_match": 47,
+    "seed": 20260910
+  },
+  "limitations": [
+    "Identity verified on a bounded sample, not all 21837 records.",
+    "Published-list membership is not a runtime training log.",
+    "ECG-FM adapted-checkpoint exposure and any external adaptation remain outside this metadata audit.",
+    "Label flags are counts under proposed mappings; no clinician adjudication and no model outputs."
+  ],
+  "new_inference_runs": 0,
+  "new_training_runs": 0,
+  "script_sha256": "77139062c94cd5fd2b2819cda1ac3af18ac641cf30b5e132f7b485c850e7cd4a"
+}
