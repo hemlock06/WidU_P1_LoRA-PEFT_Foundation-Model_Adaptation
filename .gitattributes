@@ -45,3 +45,17 @@ results/vfdb_readiness_20260910/** -text
 scripts/audit_vfdb_readiness.py -text
 scripts/build_paper_package.py -text
 scripts/verify_paper_publication.py -text
+
+# Keep reconstruction/audit fingerprints portable across checkout platforms.
+results/external_readiness_corrections_20260911/** -text
+results/external_readiness_retry_20260911/** -text
+results/external_readiness_final_20260911/** -text
+results/external_cohort_lineage_20260910/ptbxl_f3_eligible_records.csv -text
+results/external_cohort_lineage_20260910/ptbxl_f3_label_flags.csv -text
+results/external_cohort_lineage_20260910/review_adjudication_20260911.csv -text
+scripts/audit_ptbxl_cross_version.py -text
+scripts/audit_incart_annotations.py -text
+scripts/preprocess_cpsc2018_mc.py -text
+scripts/diagnose_ptbxl_identity_gate.py -text
+scripts/reconstruct_cpsc_external_control.py -text
+scripts/record_external_review_responses.py -text
