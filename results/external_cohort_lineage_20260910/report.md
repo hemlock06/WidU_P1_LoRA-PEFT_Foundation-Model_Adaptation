@@ -165,6 +165,13 @@ PTB-XL cohort filters still give 2146 / 1685 / 1684 / 1682.
 `review_findings_20260910.csv` under `adjudication: not_adjudicated`, with their severity and
 the artefact each concerns, and must be re-examined before this work is relied on.
 
+**All 52 were adjudicated against primary sources on 2026-09-11.** Per-finding verdicts and
+evidence are in `review_adjudication_20260911.csv`; the summary is `adjudication_20260911.md`.
+Outcome: 28 upheld and still open, 9 upheld in part, 13 upheld but already corrected, 2
+rejected. Fifty of the 52 had substance. The heaviest single result is that the stage-5c
+contamination risk that §1.2 of the validation protocol leaves unquantified is measurable from
+metadata alone, and measures **1012 of the 1682 F3 records (60.2%)** and 1005 of 1673 patients.
+
 ## 8. Files
 
 `ptbxl_cross_version_audit.json`, `ptbxl_cross_version_table.csv`, `ptbxl_f3_eligible_records.csv`,
