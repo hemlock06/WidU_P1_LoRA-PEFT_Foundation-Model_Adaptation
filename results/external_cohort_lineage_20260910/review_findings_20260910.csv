@@ -1,0 +1,63 @@
+adjudication,severity,dimension,title,file,independent_votes_against
+adjudicated_upheld,critical,vfdb-logic,Protocol's stated positive-window count (1039) contradicts the exclusion rule stated two paragraphs earlier in the same section,records/emergency_rhythm_protocol_v1.md,0/3
+adjudicated_upheld,major,incart,"ST-change patient count is 9, not 8 — and no computation behind it exists anywhere in the audit",results/external_cohort_lineage_20260910/report.md,0/3
+adjudicated_upheld,major,vfdb-logic,"Positive windows are not noise-filtered while negative windows are — 206 of 965 ""full malignant"" windows are 100% annotated noise",scripts/audit_vfdb_episodes.py,0/3
+adjudicated_upheld,major,vfdb-logic,Noise spans that run to end-of-record are an undocumented extrapolation beyond the quoted rule — 29.2% of all reported noise seconds,scripts/audit_vfdb_episodes.py,1/3
+adjudicated_upheld,major,vfdb-logic,"The episode table's ""Total seconds"" and ""≥30 s"" columns drop the noise qualifier that exists in the underlying artifact",records/emergency_rhythm_protocol_v1.md,0/3
+adjudicated_upheld,major,vfdb-logic,"Claimed test coverage overstates what the tests exercise — the merge step that implements the rule is untested, as are both NOISE edge cases",records/emergency_rhythm_protocol_v1.md,0/3
+adjudicated_upheld,minor,vfdb-logic,rhythm_episodes_total counts 22 UNLABELED_START pseudo-episodes as rhythm episodes,results/vfdb_episodes_20260910/audit.json,1/3
+not_adjudicated,critical,overreach,"Emergency protocol reports 1039 positive windows, but its own exclusion rule (stated one paragraph earlier) leaves 802",,0/0
+not_adjudicated,critical,overreach,The validation split named as the threshold source contains no waveforms anywhere in the repository,,0/0
+not_adjudicated,critical,protocol-integrity,"The only falsifiable pre-specified test has no decision statistic, and the reported metrics have no pinned feature-mask realization",,0/0
+not_adjudicated,critical,protocol-integrity,Section 10's hash abort rule is unexecutable: two of its three hashes are recorded nowhere in the document,,0/0
+not_adjudicated,major,consistency,INCART ADC gain range in report.md contradicts the primary headers and the audit's own JSON,,0/0
+not_adjudicated,major,consistency,"INCART ST-change patient count is 9, not 8",,0/0
+not_adjudicated,major,consistency,Protocol's secondary-cohort definition does not reproduce 844 records — the SR exemption is applied in code but stated nowhere,,0/0
+not_adjudicated,major,incart,challenge_pvc_records: 0 is a regex artifact — 60 of the 74 Challenge records do carry ventricular-ectopy codes,,0/0
+not_adjudicated,major,overreach,The INCART amplitude precedent is cited for the opposite of what the cited section concluded,,0/0
+not_adjudicated,major,overreach,"""Identical-waveform"" independence is asserted flatly, but the relation is unmeasured for the two records that decide it",,0/0
+not_adjudicated,major,overreach,Protocol asserts patient-level disjointness after the report established that PTB-XL patient_id is not a reliable identity boundary,,0/0
+not_adjudicated,major,overreach,"The secondary cohort of 844 is not derivable from the rule as written; it requires silently exempting SR from ""other-rhythm""",,0/0
+not_adjudicated,major,overreach,"The 5c ancestry risk is presented as pure absence of evidence, omitting the affirmative record and the magnitude",,0/0
+not_adjudicated,major,overreach,"Protocol drops the report's ""runtime pretraining logs"" gap while declaring the gap list exhaustive",,0/0
+not_adjudicated,major,overreach,"Lead-name statement is wrong for the cohort source the protocol declares, and a literal per-record assertion would abort the run",,0/0
+not_adjudicated,major,protocol-integrity,"The frozen artifact ships a second, conflicting five-class cohort definition that doubles the ectopy N the protocol calls decisive",,0/0
+not_adjudicated,major,protocol-integrity,The 'other-rhythm' exclusion set is never enumerated; the operative SR carve-out exists only as a script constant and swings the secondary cohort 12-fold,,0/0
+not_adjudicated,major,protocol-integrity,Section 7's threshold source is the same split that selected the frozen checkpoint; only the domain half of that dependence is disclosed,,0/0
+not_adjudicated,major,protocol-integrity,"Section 9 keeps only the lowest rung of the internal protocol's mandatory sensitivity grid, and does not disclose the narrowing",,0/0
+not_adjudicated,major,protocol-integrity,"Analysis 2 compares against 'the internal ranking', but two internal rankings exist in the same frozen file and they disagree at Kendall tau 0.57",,0/0
+not_adjudicated,major,protocol-integrity,"The ST-change endpoint is entirely ST depression: STE_ contributes 0 of its 93 positives, and this is not stated",,0/0
+not_adjudicated,major,protocol-integrity,"No primary metric is declared, and section 7 pre-excuses the failure of the only metric the primary analysis depends on",,0/0
+not_adjudicated,major,protocol-integrity,The contamination risk the protocol names as live is deterministically measurable and is neither measured nor pre-registered,,0/0
+not_adjudicated,major,protocol-integrity,"The pre-fixed threshold is an order statistic from 854 negatives but is treated as an exact constant, and its uncertainty is excluded from the bootstrap",,0/0
+not_adjudicated,major,protocol-integrity,"One clause in section 4 silently carries the entire ST endpoint and 99% of AF, and its magnitude is never stated",,0/0
+not_adjudicated,major,ptbxl-script,"age>89 privacy branch is both zero-coverage and semantically wrong: 300 also encodes *missing* age (89 records), not just >89",,0/0
+not_adjudicated,major,ptbxl-script,No assertion guards any waveform-identity result -- a total failure of the identity check exits 0 and writes a normal-looking artifact,,0/0
+not_adjudicated,major,ptbxl-script,"F2 and F3 -- the two filters the audit exists to justify -- have no regression pin, and their entire combined effect is 3 records out of 1,685",,0/0
+not_adjudicated,major,ptbxl-script,The 1.0.2 subset gate passes vacuously on an empty parse -- `dropped_in_v102_changelog: 36` is published with no assertion behind it,,0/0
+not_adjudicated,minor,consistency,Report §7 hand-trace states record 420 has three noise spans; it has four,,0/0
+not_adjudicated,minor,consistency,"""Positive counts per disease are below 100 each"" contradicts the conduction count of 111 stated in the same paragraph",,0/0
+not_adjudicated,minor,consistency,"Emergency protocol calls all 592 VFDB annotations ""rhythm-change markers""; 73 are noise markers that its own §3 says do not change rhythm",,0/0
+not_adjudicated,minor,consistency,"The 1603 negative windows are described as ""pure sinus"" but the rule admits a 0.999 tolerance; strictly pure gives 1602",,0/0
+not_adjudicated,minor,incart,Report states gains 250..1100 while its own JSON measured 240..1063,,0/0
+not_adjudicated,minor,incart,"Beat-label list reads as exhaustive but omits 159 annotations, including the only bundle-branch-block beat",,0/0
+not_adjudicated,minor,incart,Conduction availability stated asymmetrically against ST — record-level conduction codes exist for 7 records / 4 patients,,0/0
+not_adjudicated,minor,incart,"""(32 groups)"" sits next to the AF endpoint, which has positives in only 2 groups",,0/0
+not_adjudicated,minor,incart,Historical arrays are absent from the repo; the report asserts what the evaluations used without saying so,,0/0
+not_adjudicated,minor,incart,The cited 5f inversion-diagnosis script exists in neither the working tree nor git history,,0/0
+not_adjudicated,minor,overreach,INCART gain range is reported as rounded numbers that contradict the audit's own recorded values,,0/0
+not_adjudicated,minor,overreach,The official rule that defines every VFDB episode number is quoted but not preserved anywhere in the repository,,0/0
+not_adjudicated,minor,protocol-integrity,"Both abort conditions are inert: the 1% preprocessing gate cannot plausibly fire on records500, and the one preflight aimed at the known failure mode is wired to have no consequence",,0/0
+not_adjudicated,minor,protocol-integrity,'Closer to deployment' is an unsupported comparative claim in a project that bans clinical-validity claims,,0/0
+not_adjudicated,minor,protocol-integrity,The stated incomparability of specificity is not quantified: a third of the cohort carries no code from the mapping at all,,0/0
+not_adjudicated,minor,ptbxl-numbers,"""Positive counts per disease are below 100 each"" is false under the presence counts printed three lines above it",,0/0
+not_adjudicated,minor,ptbxl-numbers,"""other rhythm codes 189"" is not reproducible from the report — SR is silently excluded, and including it gives 1529",,0/0
+not_adjudicated,minor,ptbxl-numbers,"""identical ... lead names"" overstates a case-insensitive comparison; all 47/47 pairs differ in literal lead names and units",,0/0
+not_adjudicated,minor,ptbxl-numbers,"""36 identical-raw-waveform duplicates"" in section 1 is waveform-verified for only 5 of the 36; the changelogs never state the deduplication criterion",,0/0
+not_adjudicated,minor,ptbxl-script,`F3_records_with_identical_partner_in_test` does not measure 'in test' -- it measures 'has any partner at all',,0/0
+not_adjudicated,minor,ptbxl-script,"The diag_likelihood_min sweep is a structural no-op for af / ectopy / st_change_surrogate, and the JSON keys do not say so",,0/0
+not_adjudicated,minor,ptbxl-script,"Degenerate-lead blind spot in the identity comparison, with a live instance in the sample that is never surfaced",,0/0
+not_adjudicated,minor,ptbxl-script,float() on the raw Challenge header age string will crash the run rather than record a mismatch,,0/0
+adjudicated_rejected,major,incart,"""binary INCART evaluations (③ 0.710, 5f 0.284)"" merges two different models and drops the recorded inversion diagnosis",,3/3
+adjudicated_rejected,major,vfdb-logic,"Fold stratification criterion is vacuous, and the real degeneracy risk (records with zero clean negatives) is unaddressed",,2/3
+adjudicated_rejected,minor,vfdb-logic,"""records_with_unlabeled_start: 22"" is true but drops the magnitude — 96.6% of that total is one record",,3/3

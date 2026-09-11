@@ -108,18 +108,21 @@ Any PTB-XL evaluation therefore remains **conditional external validation**.
 
 ## 7. Adversarial review: what was adjudicated and what was not
 
-A seven-dimension adversarial review ran on 2026-09-10, each dimension re-deriving this
-report's numbers from the primary sources rather than reading them back. It raised **62
-findings**. Every finding was then to be tested by three independent refuters.
+An adversarial review of this report ran on 2026-09-10 across seven independent dimensions,
+each re-deriving the numbers from the primary sources rather than reading them back. It raised
+**62 findings**, each of which was then to be independently cross-checked three times.
 
-**Only 10 of the 62 were actually adjudicated.** The refuter stage hit an API session limit
-and 156 of 193 agents died mid-run. The orchestration script classified a finding with zero
-surviving voters as "not surviving", so **52 findings — including 4 marked critical and 25
-marked major — were silently filed as refuted when they were in fact never tested.** That is
-the "crash is not survival, it is unmeasured" failure reproduced inside the very harness meant
-to catch it. The counts here are the corrected reading, not the script's output.
+**Only 10 of the 62 were cross-checked.** The checking stage failed partway through and lost
+most of its checks, and the tally treated a finding with zero completed checks as rejected. So
+**52 findings — including 4 marked critical and 25 marked major — were filed as rejected when
+they had never been checked at all.** This is the failure mode this project records elsewhere,
+reproduced inside the harness built to catch it: an absent verification is not a passed one,
+and a harness that dies reports silence rather than safety. The counts given here are the
+corrected reading, not the tally's output.
 
-Of the 10 adjudicated, 7 survived and 3 were genuinely refuted on primary-source grounds.
+Of the 10 that were cross-checked, 7 were upheld and 3 were rejected on primary-source
+grounds. The complete list with per-finding adjudication status is
+`review_findings_20260910.csv`.
 
 The findings acted on below were each **re-derived by hand from the primary artefacts before
 being accepted**, not taken on the reviewer's word:
@@ -158,14 +161,15 @@ verifiable rather than merely written. Both audits were re-run and their previou
 figures are unchanged: the INCART replay still reproduces 7811 windows as 540 and 7271, and the
 PTB-XL cohort filters still give 2146 / 1685 / 1684 / 1682.
 
-**The 52 unmeasured findings are unresolved, not dismissed.** They are preserved in the
-workflow transcript at `subagents/workflows/wf_71c343ec-5cd/journal.jsonl` and must be
-re-adjudicated before this work is relied on.
+**The 52 unchecked findings are unresolved, not dismissed.** They are listed in
+`review_findings_20260910.csv` under `adjudication: not_adjudicated`, with their severity and
+the artefact each concerns, and must be re-examined before this work is relied on.
 
 ## 8. Files
 
 `ptbxl_cross_version_audit.json`, `ptbxl_cross_version_table.csv`, `ptbxl_f3_eligible_records.csv`,
 `ptbxl_f3_label_flags.csv`, `ptbxl_waveform_identity_sample.csv`, `ptbxl_source_manifest.json`,
+`review_findings_20260910.csv`,
 `incart_annotation_audit.json`, `incart_record_table.csv`, `incart_rhythm_intervals.csv`,
 `incart_window_annotation_summary.csv`, `incart_source_manifest.json`.
 Both scripts run on the repository `.venv` (Python 3.10.21, numpy 1.26.4, pandas 2.3.3,
