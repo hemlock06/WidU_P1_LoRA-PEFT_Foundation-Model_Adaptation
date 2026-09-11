@@ -1,0 +1,10 @@
+[
+  {
+    "url": "https://physionet.org/files/challenge-2021/1.0.3/training/ptb-xl/g1/HR00141.mat",
+    "error": "URLError(TimeoutError(10060, '\uc5f0\uacb0\ub41c \uad6c\uc131\uc6d0\uc73c\ub85c\ubd80\ud130 \uc751\ub2f5\uc774 \uc5c6\uc5b4 \uc5f0\uacb0\ud558\uc9c0 \ubabb\ud588\uac70\ub098, \ud638\uc2a4\ud2b8\ub85c\ubd80\ud130 \uc751\ub2f5\uc774 \uc5c6\uc5b4 \uc5f0\uacb0\uc774 \ub04a\uc5b4\uc84c\uc2b5\ub2c8\ub2e4', None, 10060, None))"
+  },
+  {
+    "url": "https://physionet.org/files/challenge-2021/1.0.3/training/ptb-xl/g8/HR07779.mat",
+    "error": "URLError(TimeoutError(10060, '\uc5f0\uacb0\ub41c \uad6c\uc131\uc6d0\uc73c\ub85c\ubd80\ud130 \uc751\ub2f5\uc774 \uc5c6\uc5b4 \uc5f0\uacb0\ud558\uc9c0 \ubabb\ud588\uac70\ub098, \ud638\uc2a4\ud2b8\ub85c\ubd80\ud130 \uc751\ub2f5\uc774 \uc5c6\uc5b4 \uc5f0\uacb0\uc774 \ub04a\uc5b4\uc84c\uc2b5\ub2c8\ub2e4', None, 10060, None))"
+  }
+]

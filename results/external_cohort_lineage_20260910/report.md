@@ -1,5 +1,15 @@
 # External cohort lineage audit: PTB-XL cross-version identity and INCART annotations
 
+> Superseding correction,2026-09-11: this report below retains the historical audit narrative.
+> The full38 drop/keep comparison found36 exactly equal pairs and2 nonexact pairs, not38
+> identical waveforms. Both F3-specific exclusion pairs matched exactly. Source hashes and
+> all78 comparisons are in `../external_readiness_final_20260911/`; the exact-identity gate
+> failed and external inference is held. Read `../../records/external_validation_protocol_amendment_20260911.md`
+> for the corrected scope,52-finding responses and present limitations. Stage5c's1012-record
+> overlap is a current-version metadata replay, not proof of historical a07 training exposure.
+> INCART ventricular-ectopy count is now60 includingVBig; conduction record codes occur in7
+> records/4 patients. Corrected audit: `../external_readiness_corrections_20260911/`.
+
 Date: 2026-09-10 KST. No model inference, no training, no external outcome was inspected.
 This audit decides which records can enter a *conditional* external evaluation and what
 each cohort can and cannot label. It does not make any cohort "independent of P1".
@@ -186,14 +196,12 @@ Test status, stated exactly:
 
 - `tests/test_external_cohort_lineage.py` — 7 tests, **executed and passed** together with
   `test_pretraining_exposure.py` and `test_stage2_lineage.py` (14 passed).
-- `tests/test_vfdb_episodes.py` — 4 tests, **written but never executed**. Windows Smart App
-  Control began blocking this repository's Python 3.10 interpreter at 2026-09-10 16:06:42,
-  after the audits had already produced their outputs but before these tests could run. They
-  are committed unexecuted and must be run before the emergency-rhythm work proceeds.
+- `tests/test_vfdb_episodes.py` — **9 tests executed and passed on2026-09-11**, including merge,
+  trailing NOISE and consecutive NOISE cases. The earlier Smart App Control block is a
+  historical environment failure, not the current test result.
   The episode logic they pin was instead verified by hand-tracing records 605 (leading noise),
   424 (noise inside an episode, repeated identical rhythm) and 420 (four noise spans, three
   identical rhythm markers) against the official annotation rule, and by reconciling every
   raw marker count with its merged episode count (VT 93 markers to 90 episodes, explained
   entirely by records 420 and 426). Hand-tracing is evidence; it is not a substitute for the
-  regression tests, which stay unverified until executed.
-
+  regression tests, which have now also been executed successfully.

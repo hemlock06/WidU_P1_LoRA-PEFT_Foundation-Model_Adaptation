@@ -1,5 +1,10 @@
 # External validation protocol v1 — frozen before any external outcome
 
+> 2026-09-11 update: read [the pre-outcome amendment](external_validation_protocol_amendment_20260911.md)
+> with this historical v1. It corrects identity scope, analysis under-specification and execution
+> status. Test reconstruction passed; the expanded identity audit failed on2 of78 pairs.
+> External inference remains held. The model, candidate list and F3 CSVs are unchanged.
+
 Date: 2026-09-10 KST. **No external model output has been produced or inspected.** This
 document fixes the cohort, labels, preprocessing, thresholds, metrics and analysis before
 any PTB-XL prediction exists, so that the result cannot be selected after the fact.

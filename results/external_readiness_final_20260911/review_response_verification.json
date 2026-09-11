@@ -1,0 +1,28 @@
+{
+  "source_rows": 62,
+  "original_unadjudicated": 52,
+  "now_adjudicated": 52,
+  "missing_responses": 0,
+  "prior_verdict_counts": {
+    "upheld_open": 28,
+    "upheld_fixed": 13,
+    "upheld_partial": 9,
+    "rejected": 2
+  },
+  "response_status_counts": {
+    "previously_corrected": 11,
+    "documented": 11,
+    "documented_limitation": 11,
+    "code_corrected": 6,
+    "plan_clarified_pending_execution": 5,
+    "gate_failed": 2,
+    "partial_execution": 1,
+    "code_corrected_gate_failed": 1,
+    "retained_rejection": 1,
+    "pending_execution": 1,
+    "code_corrected_not_reached": 1,
+    "retained_rejection_with_guard": 1
+  },
+  "external_validation_complete": false,
+  "note": "Adjudication completeness is not correction or external-gate completion."
+}

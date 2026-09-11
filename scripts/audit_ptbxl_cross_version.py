@@ -5,6 +5,7 @@ official changelogs and the pinned ECG-FM published split. A bounded waveform
 sample (Challenge .mat versus PTB-XL 1.0.3 records500 .dat) is compared exactly.
 """
 
+import argparse
 import hashlib
 import json
 import re
@@ -97,7 +98,48 @@ def scp_dict(text):
     return json.loads(text.replace("'", '"'))
 
 
+def validate_drop_maps(v102_map, v103_map, dropped_expected):
+    if len(v102_map) != 36 or len(v103_map) != 38 or set(v103_map) != set(dropped_expected):
+        raise ValueError("Unexpected changelog drop cardinality or identity")
+    if not set(v102_map) <= set(v103_map):
+        raise ValueError("1.0.2 drops are not a subset of 1.0.3 drops")
+
+
+def validate_filters(f1, f2, f3):
+    for frame, expected in ((f1, (1685, 1676)), (f2, (1684, 1675)), (f3, (1682, 1673))):
+        if (len(frame), frame.patient_id.nunique()) != expected:
+            raise ValueError(f"Frozen cohort count changed: {expected}")
+    if set(f1.ecg_id) - set(f2.ecg_id) != {2507}:
+        raise ValueError("Historical-patient exclusion identity changed")
+    if set(f2.ecg_id) - set(f3.ecg_id) != {13803, 15741}:
+        raise ValueError("Duplicate-partner exclusion identity changed")
+
+
+def age_compatibility(challenge_age, released_age, historical_age):
+    """Age300 merges missing and privacy-masked ages; consult original metadata."""
+    try:
+        actual = float(challenge_age)
+    except (TypeError, ValueError):
+        return False, "unparseable_challenge_age"
+    if pd.isna(historical_age):
+        return bool(np.isnan(actual) and released_age == 300), "historically_missing"
+    if released_age == 300:
+        return bool(historical_age > 89 and actual == historical_age), "privacy_masked"
+    return bool(actual == released_age), "numeric"
+
+
+def validate_identity(frame):
+    needed = ("digital_values_identical", "gain_match", "lead_names_match")
+    if frame.empty or not frame[list(needed)].all(axis=None):
+        raise ValueError("Waveform identity gate failed; inspect saved mismatch rows")
+
+
 def main():
+    global OUT
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--out-dir", type=Path, required=True,
+                        help="Use a new audit directory; preserve historical outputs")
+    OUT = parser.parse_args().out_dir.resolve()
     OUT.mkdir(parents=True, exist_ok=True)
     manifest = []
     for name in ("ptbxl_database_v101.csv", "ptbxl_v102_changelog.txt",
@@ -130,8 +172,7 @@ def main():
     v102_map = parse_changelog((SRC / "ptbxl_v102_changelog.txt").read_text())
     if set(v103_map) != dropped_expected or len(dropped_expected) != 38:
         raise ValueError("Changelog drop set does not equal metadata difference")
-    if not set(v102_map) <= set(v103_map):
-        raise ValueError("1.0.2 drops are not a subset of 1.0.3 drops")
+    validate_drop_maps(v102_map, v103_map, dropped_expected)
     if any(k not in set(v103.ecg_id) for k in v103_map.values()):
         raise ValueError("A kept partner is absent from 1.0.3")
 
@@ -194,6 +235,7 @@ def main():
     f3 = f2[~f2.dup_partner_in_train_or_valid]
     if len(f1) != 1685 or f1.patient_id.nunique() != 1676:
         raise ValueError("Provisional filter no longer reproduces 1685/1676")
+    validate_filters(f1, f2, f3)
 
     def counts(frame):
         return {"records": len(frame), "patients": int(frame.patient_id.nunique())}
@@ -266,11 +308,13 @@ def main():
     pool_other = sorted(set(cur.ecg_id) - set(f3.ecg_id) - set(fixed))
     sample = fixed + sorted(rng.choice(pool_f3, 24, replace=False).tolist())
     sample += sorted(rng.choice(pool_other, 8, replace=False).tolist())
-    dropped_sample = [137, 143, 2506, 11814, 11815, 3800, 3801]
+    # Verify all38 reported duplicate relations, including both F3 exclusions.
+    dropped_sample = sorted(v103_map)
     if unlisted_hr and unlisted_hr[0] in pid103:
         sample.append(unlisted_hr[0])
     fname = dict(zip(v103.ecg_id, v103.filename_hr))
     age103 = dict(zip(v103.ecg_id, v103.age))
+    age101 = dict(zip(v101.ecg_id, v101.age))
     sex103 = dict(zip(v103.ecg_id, v103.sex))
 
     jobs = []
@@ -306,8 +350,7 @@ def main():
         exact = bool(same_shape and np.array_equal(chal.astype(np.int64), ref.astype(np.int64)))
         sex_expected = {0: "Male", 1: "Female"}.get(int(sex103[target]))
         age_v103 = age103[target]
-        age_match = (age is not None and not pd.isna(age_v103)
-                     and (float(age) == float(age_v103) or (float(age_v103) == 300.0 and float(age) > 89)))
+        age_match, age_rule = age_compatibility(age, age_v103, age101[e])
         identity_rows.append({
             "challenge_hr_id": e, "compared_v103_ecg_id": target,
             "relationship": "dropped_duplicate_vs_kept" if e != target else "same_id",
@@ -318,11 +361,16 @@ def main():
             "gain_match": bool(chal_hdr.adc_gain == rec.adc_gain and chal_hdr.baseline == rec.baseline),
             "lead_names_match": bool([s.upper() for s in chal_hdr.sig_name] == [s.upper() for s in rec.sig_name]),
             "challenge_age": age, "v103_age": age_v103, "age_match": bool(age_match),
+            "age_comparison_rule": age_rule,
+            "literal_lead_names_match": chal_hdr.sig_name == rec.sig_name,
+            "unit_names_casefold_match": [s.lower() for s in chal_hdr.units] == [s.lower() for s in rec.units],
+            "constant_lead_indices": ";".join(map(str, np.flatnonzero(np.ptp(chal, axis=1) == 0))),
             "challenge_sex": sex, "v103_sex": sex_expected, "sex_match": bool(sex == sex_expected),
         })
     identity = pd.DataFrame(identity_rows)
     identity.to_csv(OUT / "ptbxl_waveform_identity_sample.csv", index=False)
     (OUT / "ptbxl_source_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    validate_identity(identity)
 
     result = {
         "status": "cross_version_and_duplicate_exposure_audited_not_an_evaluation",
@@ -356,7 +404,7 @@ def main():
             "removed_F1_to_F2_by_dropped_history": counts(lost_by_history),
             "removed_F2_to_F3_by_duplicate_partner": counts(lost_by_dup),
             "F3_records_with_identical_partner_in_test": int(
-                (f3.dup_partner_splits != "").sum()),
+                f3.dup_partner_splits.map(lambda value: "test" in value.split(";")).sum()),
         },
         "label_presence_under_mapping_proposals": label_summary,
         "waveform_identity_sample": {
@@ -374,6 +422,8 @@ def main():
             "Published-list membership is not a runtime training log.",
             "ECG-FM adapted-checkpoint exposure and any external adaptation remain outside this metadata audit.",
             "Label flags are counts under proposed mappings; no clinician adjudication and no model outputs.",
+            "Diagnostic likelihood sweep leaves form/rhythm presence unchanged by design; conduction is empirically invariant here.",
+            "Lead names are compared case-insensitively; literal spelling and constant leads are recorded separately.",
         ],
         "new_inference_runs": 0, "new_training_runs": 0,
         "script_sha256": sha(Path(__file__)),

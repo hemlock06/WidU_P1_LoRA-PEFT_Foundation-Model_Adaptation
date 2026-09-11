@@ -1,0 +1,48 @@
+{
+  "created_utc": "2026-09-11T06:56:28.423728+00:00",
+  "python": "3.10.21",
+  "numpy": "1.26.4",
+  "status": "PASS_TEST_RECONSTRUCTION_ONLY",
+  "failures": [],
+  "skipped": 0,
+  "control_only": true,
+  "validation_reconstructed": false,
+  "id_provenance": "Recovered original test IDs retained, not independently regenerated",
+  "sources": {
+    "labels.npy": "552630f68b169de1605c672424166b5432035e46c86c5d81debe6e8ccfeb9e5b",
+    "labels_bin.npy": "b302dc77e5f59e1f8ec3ff226870716c90290467259052e7ce6cfa70d6b7c5a0",
+    "record_ids.npy": "4c6be29268e2270e9e46537b517260446451f92141c525f1631f225c23312218",
+    "signals.npy": "c845bb6c30faa369c72c676fb51bb89e24ade4a2043fe406c00e48fe9fd65045"
+  },
+  "code_sha256": {
+    "reconstruct_cpsc_external_control.py": "437d9bfee8bb32688c48127877a1f96a8bc5f7e6126b2c19231538b38af31dcc",
+    "preprocess_cpsc2018_mc.py": "9867b814a004cca8389ff0631b0623b55a99b21cedae0e0713d3732c441cfa54"
+  },
+  "comparisons": {
+    "signals.npy": {
+      "original_sha256": "c845bb6c30faa369c72c676fb51bb89e24ade4a2043fe406c00e48fe9fd65045",
+      "reconstructed_sha256": "c845bb6c30faa369c72c676fb51bb89e24ade4a2043fe406c00e48fe9fd65045",
+      "byte_exact": true
+    },
+    "labels.npy": {
+      "original_sha256": "552630f68b169de1605c672424166b5432035e46c86c5d81debe6e8ccfeb9e5b",
+      "reconstructed_sha256": "552630f68b169de1605c672424166b5432035e46c86c5d81debe6e8ccfeb9e5b",
+      "byte_exact": true
+    },
+    "labels_bin.npy": {
+      "original_sha256": "b302dc77e5f59e1f8ec3ff226870716c90290467259052e7ce6cfa70d6b7c5a0",
+      "reconstructed_sha256": "b302dc77e5f59e1f8ec3ff226870716c90290467259052e7ce6cfa70d6b7c5a0",
+      "byte_exact": true
+    },
+    "record_ids.npy": {
+      "original_sha256": "4c6be29268e2270e9e46537b517260446451f92141c525f1631f225c23312218",
+      "reconstructed_sha256": "4c6be29268e2270e9e46537b517260446451f92141c525f1631f225c23312218",
+      "byte_exact": true
+    }
+  },
+  "records": 936,
+  "signal_mismatches": 0,
+  "label_mismatches": 0,
+  "max_abs_difference": 0.0,
+  "elapsed_seconds": 5.235000000000582
+}

@@ -1,0 +1,20 @@
+{
+  "status": "FAIL_EXACT_IDENTITY_GATE",
+  "compared_pairs": 78,
+  "nonidentical_pairs": [
+    [
+      3832,
+      15768
+    ],
+    [
+      11838,
+      11839
+    ]
+  ],
+  "exact_pairs": 76,
+  "f3_exclusion_pairs_exact": true,
+  "cohort_modified": false,
+  "external_inference_runs": 0,
+  "interpretation": "Changelog deletion relation is not universal byte identity; no gate relaxation.",
+  "script_sha256": "23368fc9611acbb39fb61ba4b40dd86abc605865aae2b6bca90bef5d8d524b6b"
+}

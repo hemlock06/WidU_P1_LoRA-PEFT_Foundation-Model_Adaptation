@@ -85,16 +85,14 @@ VF 9, VFIB 4 in the readiness audit) differ from episode counts because consecut
 states merge — the merge fires 53 times on real data, 52 of them the rhythm-re-annotated-
 after-noise case. Neither figure is a patient count.
 
-Negatives: 1603 ten-second windows across 15 records are pure sinus with no noise overlap
+Negatives: 1603 ten-second windows across15 records have at least99.9% sinus occupancy and no noise overlap
 (1778 before the noise filter). That is the entire clean-negative supply, from an
 all-abnormal cohort.
 
-**Test status.** `tests/test_vfdb_episodes.py` pins the noise-does-not-terminate-rhythm
-contrast, the unlabeled prefix and the late-first-marker case. It does **not** yet exercise
-the merge step, `(NOISE` as the final marker, or two consecutive `(NOISE` markers, and the
-suite has never been executed (see §7). The merge step is what actually realises "the previous
-rhythm continues" when the same rhythm is re-annotated after noise, so a regression there
-would change every count in the table above while the current tests stayed green.
+**Test status, updated2026-09-11.** All9 tests in `tests/test_vfdb_episodes.py` pass,
+including merge, final NOISE and consecutive NOISE cases. Strict100% sinus occupancy would
+give1602 negatives; record610 at800s has0.9996 occupancy. The original0.999 tolerance is
+retained and disclosed. These parser tests are not model or clinical validation.
 
 ## 4. What the data cannot support
 

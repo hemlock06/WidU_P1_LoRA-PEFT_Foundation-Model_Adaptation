@@ -5,6 +5,7 @@ model inference). Replays the historical `preprocess_incart.py` window labelling
 from annotations alone to state exactly what the earlier binary evaluation used.
 """
 
+import argparse
 import hashlib
 import json
 import re
@@ -96,6 +97,10 @@ def rhythm_intervals(ann, sig_len):
 
 
 def main():
+    global OUT
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--out-dir", type=Path, required=True)
+    OUT = parser.parse_args().out_dir.resolve()
     OUT.mkdir(parents=True, exist_ok=True)
     manifest = []
     sums = {}
@@ -240,10 +245,9 @@ def main():
 
     chal_af = table[table.challenge_dx_names.str.contains(r"\bAF\b|PAF", regex=True)].index.tolist()
     ann_af = table[table.rhythm_labels.str.contains(r"\(AFIB|\(WPWAF", regex=True)].index.tolist()
-    # The Challenge abbreviations for ventricular ectopy are VEB/VPVC, not PVC; matching only
-    # "PVC" returned 0 and read as an absence rather than as a pattern that never matches.
+    # Include record-level ventricular bigeminy (I32); these are not beat counts.
     chal_pvc = table[
-        table.challenge_dx_names.str.contains(r"\bPVC\b|\bVEB\b|\bVPVC\b", regex=True)
+        table.challenge_dx_names.str.contains(r"\b(?:PVC|VEB|VPVC|VBig)\b", regex=True)
     ].index.tolist()
     # ST change has no time-stamped annotation; it exists as record-level free text and as
     # record-level Challenge codes. Both routes are computed so the count is reproducible.
@@ -253,6 +257,8 @@ def main():
     ].index.tolist()
     st_patients = sorted({int(table.loc[r, "patient"]) for r in st_text})
     chal_bbb = table[table.challenge_dx_names.str.contains("BBB", regex=False)].index.tolist()
+    chal_conduction = table[table.challenge_dx_names.str.contains(
+        r"\b(?:BBB|RBBB|NSIVCB|MoI)\b", regex=True)].index.tolist()
     age_mismatch = [r for r in chal_to_orig.values()
                     if str(table.loc[r, "age"]) != str(table.loc[r, "challenge_age"])]
     sex_map = {"M": "Male", "F": "Female"}
@@ -284,6 +290,8 @@ def main():
         "st_change_patients": st_patients,
         "st_change_patient_count": len(st_patients),
         "challenge_bbb_records": chal_bbb,
+        "challenge_conduction_record_codes": chal_conduction,
+        "challenge_conduction_patients": sorted({int(table.loc[r, "patient"]) for r in chal_conduction}),
         "challenge_vs_original_age_mismatch": age_mismatch,
         "challenge_vs_original_sex_mismatch": sex_mismatch,
         "historical_preprocess_replay": {

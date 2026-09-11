@@ -5,6 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
+import pandas as pd
 import pytest
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
@@ -19,6 +20,49 @@ def load(name):
 
 PTBXL = load("audit_ptbxl_cross_version")
 INCART = load("audit_incart_annotations")
+
+
+@pytest.mark.parametrize("age,released,historical,expected", [
+    ("NaN", 300, np.nan, True), ("91", 300, 91, True),
+    ("91", 300, np.nan, False), ("unknown", 300, 91, False),
+    ("48", 48, 48, True), ("47", 48, 48, False)])
+def test_age_missing_and_privacy_masking_are_distinct(age, released, historical, expected):
+    assert PTBXL.age_compatibility(age, released, historical)[0] is expected
+
+
+def test_identity_failure_cannot_be_published_as_pass():
+    columns = ["digital_values_identical", "gain_match", "lead_names_match"]
+    PTBXL.validate_identity(pd.DataFrame([[True]*3], columns=columns))
+    for column in columns:
+        frame = pd.DataFrame([[True]*3], columns=columns)
+        frame.loc[0, column] = False
+        with pytest.raises(ValueError, match="identity gate"):
+            PTBXL.validate_identity(frame)
+    with pytest.raises(ValueError):
+        PTBXL.validate_identity(pd.DataFrame(columns=columns))
+
+
+def test_empty_changelog_cannot_pass_subset_gate():
+    v103 = {i: i+100 for i in range(38)}
+    PTBXL.validate_drop_maps(dict(list(v103.items())[:36]), v103, set(v103))
+    with pytest.raises(ValueError):
+        PTBXL.validate_drop_maps({}, v103, set(v103))
+
+
+def test_frozen_filter_counts_and_removed_identities_are_pinned():
+    # Nine repeated patient IDs account for the record/patient difference.
+    ids = [2507, 13803, 15741] + list(range(20000, 21682))
+    patients = list(range(1676)) + list(range(100, 109))
+    f1 = pd.DataFrame({"ecg_id": ids, "patient_id": patients})
+    f2 = f1[f1.ecg_id != 2507]
+    f3 = f2[~f2.ecg_id.isin([13803, 15741])]
+    PTBXL.validate_filters(f1, f2, f3)
+    with pytest.raises(ValueError):
+        PTBXL.validate_filters(f1, f2, f3.iloc[1:])
+    changed = f1.copy()
+    changed.loc[changed.ecg_id == 2507, "ecg_id"] = 2508
+    with pytest.raises(ValueError, match="identity changed"):
+        PTBXL.validate_filters(changed, f2, f3)
 
 
 def test_changelog_parser_maps_every_dropped_id_to_one_kept_partner():
