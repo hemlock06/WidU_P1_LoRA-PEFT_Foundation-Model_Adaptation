@@ -52,3 +52,9 @@ Reproduction commands from repository root (each new run should use a new output
 No raw waveforms, checkpoint weights or private conversation transcripts are included.
 The claim is a reproducible preparation/audit result and decision record, not external
 performance, clinical benefit, real wearable optimality or early prediction.
+
+Byte-preservation correction: Git initially normalized line endings for some evidence files.
+Commit0064368 adds explicit `-text` paths and stores the actual hash-addressed local bytes,
+including the original F3 CSVs and the preprocessing source. No waveform, label value, ID,
+or preprocessing operation changed. `package_verification.json` compares the43 changed files
+at that commit against local bytes; this is repository verification, not remote verification.

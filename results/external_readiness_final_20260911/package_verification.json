@@ -1,0 +1,318 @@
+{
+  "status": "PASS_ARCHIVE_CHECKS_EXTERNAL_IDENTITY_STILL_FAILS",
+  "audited_commit": "0064368f78aea488f28a04f805b97db662bc6c45",
+  "base_commit": "a92e9a729a29a1e364d81b983390619bf09c1352",
+  "file_count": 43,
+  "files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 3032,
+      "sha256": "ab519c514cd6eac4e9201486f8e972ea89cada644ef621068cf810f3699cd8fe",
+      "commit_blob_sha256": "22ac7450b694fc3cfeb10061c98d18f60c3e58d6a7be069b55e07de2871667ab",
+      "byte_equal": false
+    },
+    {
+      "path": "records/emergency_rhythm_protocol_v1.md",
+      "bytes": 12679,
+      "sha256": "9b75ae4b3eccd493eef7293553ec6aabe37dc696bf96dc8b3afd454d0e958f73",
+      "commit_blob_sha256": "9b75ae4b3eccd493eef7293553ec6aabe37dc696bf96dc8b3afd454d0e958f73",
+      "byte_equal": true
+    },
+    {
+      "path": "records/external_validation_protocol_amendment_20260911.md",
+      "bytes": 11522,
+      "sha256": "f5bb9ba7643a09569f548f736d1b2aa9164a87d4bef7834ea99fd04f0d304419",
+      "commit_blob_sha256": "f5bb9ba7643a09569f548f736d1b2aa9164a87d4bef7834ea99fd04f0d304419",
+      "byte_equal": true
+    },
+    {
+      "path": "records/external_validation_protocol_v1.md",
+      "bytes": 15589,
+      "sha256": "bd11dc4492abc84d380ff3c268d42e63bd209ccf5288d7d0afdd4b992d3c464d",
+      "commit_blob_sha256": "bd11dc4492abc84d380ff3c268d42e63bd209ccf5288d7d0afdd4b992d3c464d",
+      "byte_equal": true
+    },
+    {
+      "path": "records/paper_decisions_and_implications_20260911.md",
+      "bytes": 13123,
+      "sha256": "1acc825e4c254edd68b1e2db8e23cded6cc2b1dd5a4b8acc440ad85eebbf68da",
+      "commit_blob_sha256": "1acc825e4c254edd68b1e2db8e23cded6cc2b1dd5a4b8acc440ad85eebbf68da",
+      "byte_equal": true
+    },
+    {
+      "path": "records/paper_synthesis_20260910.md",
+      "bytes": 27184,
+      "sha256": "1696fa49954a5e8a51c869900945fc8f9f2c9383b013647b3196b7b09ca38347",
+      "commit_blob_sha256": "1696fa49954a5e8a51c869900945fc8f9f2c9383b013647b3196b7b09ca38347",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_cohort_lineage_20260910/ptbxl_f3_eligible_records.csv",
+      "bytes": 35462,
+      "sha256": "b23fbe6661efa02ff9eda9b1d17631d4b7fb6e7e96855a46eacba4c1ecbd9c8d",
+      "commit_blob_sha256": "b23fbe6661efa02ff9eda9b1d17631d4b7fb6e7e96855a46eacba4c1ecbd9c8d",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_cohort_lineage_20260910/ptbxl_f3_label_flags.csv",
+      "bytes": 46412,
+      "sha256": "3f33afd43a3b8d600ab1b232e4553c311888fa333e2708fca421227bafab24c5",
+      "commit_blob_sha256": "3f33afd43a3b8d600ab1b232e4553c311888fa333e2708fca421227bafab24c5",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_cohort_lineage_20260910/report.md",
+      "bytes": 14607,
+      "sha256": "bd3c3406a7aba438f09c5d523409cb58d78432c8a9d0635744275b08d369c725",
+      "commit_blob_sha256": "bd3c3406a7aba438f09c5d523409cb58d78432c8a9d0635744275b08d369c725",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_cohort_lineage_20260910/review_adjudication_20260911.csv",
+      "bytes": 27845,
+      "sha256": "a38f2333429488fa918f17cf8596fa776feca118f7e6aa02ef39072b0b4ad224",
+      "commit_blob_sha256": "a38f2333429488fa918f17cf8596fa776feca118f7e6aa02ef39072b0b4ad224",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_corrections_20260911/incart_annotation_audit.json",
+      "bytes": 3333,
+      "sha256": "007c7971d33ea353eb5efa9cdbc05f9f2a0d9303b83ad6b082dd8c8a5629dea4",
+      "commit_blob_sha256": "007c7971d33ea353eb5efa9cdbc05f9f2a0d9303b83ad6b082dd8c8a5629dea4",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_corrections_20260911/incart_record_table.csv",
+      "bytes": 19741,
+      "sha256": "52108120be1a907244730e7089b97aab52b62adeb5a8b41e8c2588a222fc3612",
+      "commit_blob_sha256": "52108120be1a907244730e7089b97aab52b62adeb5a8b41e8c2588a222fc3612",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_corrections_20260911/incart_rhythm_intervals.csv",
+      "bytes": 760,
+      "sha256": "92503490789b2f313c7dd64694736c8bfaec2ec91c9c8b2ed9107b4b4b40ccd3",
+      "commit_blob_sha256": "92503490789b2f313c7dd64694736c8bfaec2ec91c9c8b2ed9107b4b4b40ccd3",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_corrections_20260911/incart_source_manifest.json",
+      "bytes": 53393,
+      "sha256": "32c13d8c161a86a5d1dd5decebfc1a003a5a49f05aec58483c189ce87b8485db",
+      "commit_blob_sha256": "32c13d8c161a86a5d1dd5decebfc1a003a5a49f05aec58483c189ce87b8485db",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_corrections_20260911/incart_window_annotation_summary.csv",
+      "bytes": 440932,
+      "sha256": "cce1e8ecf1254bb3ebce33ce241890d39d65cbb4caeae9658b07bf9bfbd565af",
+      "commit_blob_sha256": "cce1e8ecf1254bb3ebce33ce241890d39d65cbb4caeae9658b07bf9bfbd565af",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_corrections_20260911/ptbxl_cross_version_table.csv",
+      "bytes": 973373,
+      "sha256": "25ff803c6630800aacf8f40731ba4798ec44fb7a1920505a5203d6cc482cbc97",
+      "commit_blob_sha256": "25ff803c6630800aacf8f40731ba4798ec44fb7a1920505a5203d6cc482cbc97",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_corrections_20260911/ptbxl_f3_eligible_records.csv",
+      "bytes": 35462,
+      "sha256": "b23fbe6661efa02ff9eda9b1d17631d4b7fb6e7e96855a46eacba4c1ecbd9c8d",
+      "commit_blob_sha256": "b23fbe6661efa02ff9eda9b1d17631d4b7fb6e7e96855a46eacba4c1ecbd9c8d",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_corrections_20260911/ptbxl_f3_label_flags.csv",
+      "bytes": 46412,
+      "sha256": "3f33afd43a3b8d600ab1b232e4553c311888fa333e2708fca421227bafab24c5",
+      "commit_blob_sha256": "3f33afd43a3b8d600ab1b232e4553c311888fa333e2708fca421227bafab24c5",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_corrections_20260911/ptbxl_sample_failures.json",
+      "bytes": 8816,
+      "sha256": "e8d5102d0e4520576c19c400728430fe4d1340ebd345b68116e25801fbe555da",
+      "commit_blob_sha256": "e8d5102d0e4520576c19c400728430fe4d1340ebd345b68116e25801fbe555da",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_final_20260911/README.md",
+      "bytes": 3934,
+      "sha256": "65330f211558920822fba117aa5026f34c7e8125de64eca10f7706f154ae9470",
+      "commit_blob_sha256": "65330f211558920822fba117aa5026f34c7e8125de64eca10f7706f154ae9470",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_final_20260911/cpsc_test_control.json",
+      "bytes": 2128,
+      "sha256": "5197a949ab714fdc209bc4543133b656b5a2d0a4aedc3f64faf9a92941ea37f5",
+      "commit_blob_sha256": "5197a949ab714fdc209bc4543133b656b5a2d0a4aedc3f64faf9a92941ea37f5",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_final_20260911/cpsc_test_raw_inventory.json",
+      "bytes": 294735,
+      "sha256": "6ade947e9a0856eafa0a9b4dacf6156d9d7ac63d6fe4718ccd26a4cb533a6b83",
+      "commit_blob_sha256": "6ade947e9a0856eafa0a9b4dacf6156d9d7ac63d6fe4718ccd26a4cb533a6b83",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_final_20260911/identity_differences_by_lead.csv",
+      "bytes": 32151,
+      "sha256": "aacaf49836fbe918c609de389f894bc1b17aad14a3894adb6ace2de0d2048cf6",
+      "commit_blob_sha256": "aacaf49836fbe918c609de389f894bc1b17aad14a3894adb6ace2de0d2048cf6",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_final_20260911/identity_gate_diagnosis.json",
+      "bytes": 499,
+      "sha256": "7651af3cf956a12830f2113669b0858445ae7b35a6ca886bb04dcf18c29b793d",
+      "commit_blob_sha256": "7651af3cf956a12830f2113669b0858445ae7b35a6ca886bb04dcf18c29b793d",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_final_20260911/ptbxl_cross_version_table.csv",
+      "bytes": 973373,
+      "sha256": "25ff803c6630800aacf8f40731ba4798ec44fb7a1920505a5203d6cc482cbc97",
+      "commit_blob_sha256": "25ff803c6630800aacf8f40731ba4798ec44fb7a1920505a5203d6cc482cbc97",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_final_20260911/ptbxl_f3_eligible_records.csv",
+      "bytes": 35462,
+      "sha256": "b23fbe6661efa02ff9eda9b1d17631d4b7fb6e7e96855a46eacba4c1ecbd9c8d",
+      "commit_blob_sha256": "b23fbe6661efa02ff9eda9b1d17631d4b7fb6e7e96855a46eacba4c1ecbd9c8d",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_final_20260911/ptbxl_f3_label_flags.csv",
+      "bytes": 46412,
+      "sha256": "3f33afd43a3b8d600ab1b232e4553c311888fa333e2708fca421227bafab24c5",
+      "commit_blob_sha256": "3f33afd43a3b8d600ab1b232e4553c311888fa333e2708fca421227bafab24c5",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_final_20260911/ptbxl_source_manifest.json",
+      "bytes": 92335,
+      "sha256": "02ced44871e77fc0cee0eb09ff3b4019793e853016da942b5e1ec3dc2cbfcff2",
+      "commit_blob_sha256": "02ced44871e77fc0cee0eb09ff3b4019793e853016da942b5e1ec3dc2cbfcff2",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_final_20260911/ptbxl_waveform_identity_sample.csv",
+      "bytes": 9230,
+      "sha256": "90f80d934578e0b08e8ed4474bdd9508b0f027e499b14c9cebe7a8326066c611",
+      "commit_blob_sha256": "90f80d934578e0b08e8ed4474bdd9508b0f027e499b14c9cebe7a8326066c611",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_final_20260911/review_response_verification.json",
+      "bytes": 795,
+      "sha256": "80756f5eaf32570229a5254fd1714044c16d8b0992f2d22890908e2153cb5998",
+      "commit_blob_sha256": "80756f5eaf32570229a5254fd1714044c16d8b0992f2d22890908e2153cb5998",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_final_20260911/review_responses.csv",
+      "bytes": 44885,
+      "sha256": "1f8d3460f5705a7cadb5cdbb85a4a0c35d22ddac910391e649784c652d7f71e9",
+      "commit_blob_sha256": "1f8d3460f5705a7cadb5cdbb85a4a0c35d22ddac910391e649784c652d7f71e9",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_final_20260911/tests.xml",
+      "bytes": 8439,
+      "sha256": "73ff327675cc83509a259fee7ed3acae4d5af45052cf81775e15fe7fe66b23b1",
+      "commit_blob_sha256": "73ff327675cc83509a259fee7ed3acae4d5af45052cf81775e15fe7fe66b23b1",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_retry_20260911/ptbxl_cross_version_table.csv",
+      "bytes": 973373,
+      "sha256": "25ff803c6630800aacf8f40731ba4798ec44fb7a1920505a5203d6cc482cbc97",
+      "commit_blob_sha256": "25ff803c6630800aacf8f40731ba4798ec44fb7a1920505a5203d6cc482cbc97",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_retry_20260911/ptbxl_f3_eligible_records.csv",
+      "bytes": 35462,
+      "sha256": "b23fbe6661efa02ff9eda9b1d17631d4b7fb6e7e96855a46eacba4c1ecbd9c8d",
+      "commit_blob_sha256": "b23fbe6661efa02ff9eda9b1d17631d4b7fb6e7e96855a46eacba4c1ecbd9c8d",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_retry_20260911/ptbxl_f3_label_flags.csv",
+      "bytes": 46412,
+      "sha256": "3f33afd43a3b8d600ab1b232e4553c311888fa333e2708fca421227bafab24c5",
+      "commit_blob_sha256": "3f33afd43a3b8d600ab1b232e4553c311888fa333e2708fca421227bafab24c5",
+      "byte_equal": true
+    },
+    {
+      "path": "results/external_readiness_retry_20260911/ptbxl_sample_failures.json",
+      "bytes": 893,
+      "sha256": "8945126823261a361b7bdb37528cc27368a1992e9e638e8d57045e80179c19f2",
+      "commit_blob_sha256": "8945126823261a361b7bdb37528cc27368a1992e9e638e8d57045e80179c19f2",
+      "byte_equal": true
+    },
+    {
+      "path": "scripts/audit_incart_annotations.py",
+      "bytes": 17806,
+      "sha256": "3ebfeb77ad1a8178d5a8d26f76e991f824f6dd4b99d999fbfdd26a1fab849365",
+      "commit_blob_sha256": "3ebfeb77ad1a8178d5a8d26f76e991f824f6dd4b99d999fbfdd26a1fab849365",
+      "byte_equal": true
+    },
+    {
+      "path": "scripts/audit_ptbxl_cross_version.py",
+      "bytes": 21597,
+      "sha256": "0afc89cf0b3412f2d7c9297a02d2a63130d59187bfd4d39c2ca59fcc1b19d304",
+      "commit_blob_sha256": "0afc89cf0b3412f2d7c9297a02d2a63130d59187bfd4d39c2ca59fcc1b19d304",
+      "byte_equal": true
+    },
+    {
+      "path": "scripts/diagnose_ptbxl_identity_gate.py",
+      "bytes": 2718,
+      "sha256": "23368fc9611acbb39fb61ba4b40dd86abc605865aae2b6bca90bef5d8d524b6b",
+      "commit_blob_sha256": "23368fc9611acbb39fb61ba4b40dd86abc605865aae2b6bca90bef5d8d524b6b",
+      "byte_equal": true
+    },
+    {
+      "path": "scripts/preprocess_cpsc2018_mc.py",
+      "bytes": 11368,
+      "sha256": "9867b814a004cca8389ff0631b0623b55a99b21cedae0e0713d3732c441cfa54",
+      "commit_blob_sha256": "9867b814a004cca8389ff0631b0623b55a99b21cedae0e0713d3732c441cfa54",
+      "byte_equal": true
+    },
+    {
+      "path": "scripts/reconstruct_cpsc_external_control.py",
+      "bytes": 5838,
+      "sha256": "437d9bfee8bb32688c48127877a1f96a8bc5f7e6126b2c19231538b38af31dcc",
+      "commit_blob_sha256": "437d9bfee8bb32688c48127877a1f96a8bc5f7e6126b2c19231538b38af31dcc",
+      "byte_equal": true
+    },
+    {
+      "path": "scripts/record_external_review_responses.py",
+      "bytes": 7945,
+      "sha256": "0ad77fcf70b030164ed852ef01212f169a1d2235a2e079314daf3369500c1542",
+      "commit_blob_sha256": "0ad77fcf70b030164ed852ef01212f169a1d2235a2e079314daf3369500c1542",
+      "byte_equal": true
+    },
+    {
+      "path": "tests/test_external_cohort_lineage.py",
+      "bytes": 4693,
+      "sha256": "b409a38e938c0e780617ec1eec80b4b8e4542ac9d3e7d31aa23af797d81f07cf",
+      "commit_blob_sha256": "b409a38e938c0e780617ec1eec80b4b8e4542ac9d3e7d31aa23af797d81f07cf",
+      "byte_equal": true
+    }
+  ],
+  "cpsc_control": "PASS936",
+  "tests_passed": 64,
+  "review_responses": 52,
+  "missing_responses": 0,
+  "identity_pairs": 78,
+  "identity_exact": 76,
+  "external_inference_runs": 0,
+  "thresholds_computed": false,
+  "push_performed": false
+}
