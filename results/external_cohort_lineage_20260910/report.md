@@ -60,15 +60,15 @@ holds all 21837 ids with both patient ids, split, drop status and partner splits
 the unlisted 12722, kept partners 138/144/2507/11816/3802, 24 random F3 records and 8
 random non-F3 records, seed 20260910) and 7 dropped-Challenge-record versus kept-1.0.3
 record pairs (137->138, 143->144, 2506->2507, 11814/11815->11816, 3800/3801->3802).
-All 47 were identical in digital values, gain (1000/mV), baseline, lead names, age and
-sex. This confirms the numeric HR->ecg_id assumption and the duplicate claim on the
+All 47 were identical in digital values, gain (1000/mV), baseline, case-normalized lead
+names, age and sex. This confirms the numeric HR->ecg_id assumption and the duplicate claim on the
 sample; it is not a check of all 21837 records.
 
 ## 4. Label availability in F3 under the proposed SCP mapping
 
 Presence counts (diagnostic-statement likelihood >= 50; form/rhythm codes by presence):
 AFIB 91; STD_/STE_ 93; 1AVB/CLBBB/CRBBB 111; PAC/PVC 95; NORM 834. Other conduction codes
-(ILBBB/IRBBB/IVCD/LAFB/LPFB/WPW/2AVB/3AVB) 268 and other rhythm codes 189 are present and
+(ILBBB/IRBBB/IVCD/LAFB/LPFB/WPW/2AVB/3AVB) 268 and other rhythm codes excluding SR 189 are present and
 require explicit exclusion rules. Under the historical CPSC priority (ST > AF > conduction >
 ectopy > normal) the exclusive counts are 93 / 71 / 99 / 59 / 797 with 563 unmapped.
 The NORM count is sensitive to the likelihood threshold (839 / 834 / 633 at >=1 / >=50 / =100).
@@ -154,8 +154,9 @@ being accepted**, not taken on the reviewer's word:
 **Script defects found, fixed and re-run on 2026-09-11:**
 
 - `audit_incart_annotations.py` reported `challenge_pvc_records: 0`. That was a regex artifact:
-  the Challenge headers use `VEB`/`VPVC`, not `PVC`. The field is now
-  `challenge_ventricular_ectopy_records: 59`. A zero that means "the pattern never matches"
+  the Challenge headers use `VEB`/`VPVC`, not `PVC`. Including `VBig` (I32), the corrected
+  [INCART audit](../external_readiness_corrections_20260911/incart_annotation_audit.json) reports
+  `challenge_ventricular_ectopy_records: 60`. A zero that means "the pattern never matches"
   must not be shipped looking like an absence.
 - The same script computed no ST record or patient count, so the §6 figures had no derivation.
   It now emits both routes and their agreement: `st_change_records_by_description` and
